@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 // ─── Sign Up ─────────────────────────────────────────────────────────────────
@@ -73,17 +74,21 @@ export async function signOut(): Promise<void> {
 // ─── Google OAuth Sign In ───────────────────────────────────────────────────
 
 export async function signInWithGoogle(next?: string): Promise<{ error: string | null; url?: string }> {
+  const headerList = await headers();
+  const host = headerList.get("host");
+  const proto = headerList.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
+  const currentOrigin = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+
   const supabase = await createClient();
   const rawNext = next ?? "/account";
   const sanitizedNext = (rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes(":"))
     ? rawNext
     : "/account";
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(sanitizedNext)}`,
+      redirectTo: `${currentOrigin}/auth/callback?next=${encodeURIComponent(sanitizedNext)}`,
     },
   });
 
