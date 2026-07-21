@@ -72,7 +72,7 @@ export async function signOut(): Promise<void> {
 
 // ─── Google OAuth Sign In ───────────────────────────────────────────────────
 
-export async function signInWithGoogle(next?: string): Promise<void> {
+export async function signInWithGoogle(next?: string): Promise<{ error: string | null; url?: string }> {
   const supabase = await createClient();
   const rawNext = next ?? "/account";
   const sanitizedNext = (rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes(":"))
@@ -88,10 +88,15 @@ export async function signInWithGoogle(next?: string): Promise<void> {
   });
 
   if (error) {
-    throw new Error(error.message);
+    if (error.message.includes("not enabled") || error.status === 400) {
+      return { error: "Google Sign-In is currently disabled in your Supabase Dashboard under Authentication -> Providers -> Google." };
+    }
+    return { error: error.message };
   }
 
   if (data.url) {
     redirect(data.url);
   }
+
+  return { error: null };
 }

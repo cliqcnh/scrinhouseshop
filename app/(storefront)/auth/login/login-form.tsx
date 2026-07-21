@@ -10,12 +10,19 @@ interface Props {
 export function LoginForm({ next }: Props) {
   const [state, action, pending] = useActionState(signIn, { error: null });
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   async function handleGoogleSignIn() {
     try {
+      setGoogleError(null);
       setGoogleLoading(true);
-      await signInWithGoogle(next);
-    } catch {
+      const res = await signInWithGoogle(next);
+      if (res?.error) {
+        setGoogleError(res.error);
+      }
+    } catch (err: any) {
+      setGoogleError(err.message || "Failed to sign in with Google.");
+    } finally {
       setGoogleLoading(false);
     }
   }
@@ -62,9 +69,9 @@ export function LoginForm({ next }: Props) {
         {/* Hidden redirect target */}
         {next && <input type="hidden" name="next" value={next} />}
 
-        {state.error && (
+        {(state.error || googleError) && (
           <p className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {state.error}
+            {state.error || googleError}
           </p>
         )}
 
