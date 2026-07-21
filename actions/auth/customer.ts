@@ -69,3 +69,29 @@ export async function signOut(): Promise<void> {
   revalidatePath("/", "layout");
   redirect("/");
 }
+
+// ─── Google OAuth Sign In ───────────────────────────────────────────────────
+
+export async function signInWithGoogle(next?: string): Promise<void> {
+  const supabase = await createClient();
+  const rawNext = next ?? "/account";
+  const sanitizedNext = (rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes(":"))
+    ? rawNext
+    : "/account";
+
+  const origin = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(sanitizedNext)}`,
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (data.url) {
+    redirect(data.url);
+  }
+}

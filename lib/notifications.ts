@@ -22,24 +22,66 @@ export function normalizePhoneNumber(phone: string): string {
 }
 
 /**
- * Sends SMS via Arkesel SMS API Gateway.
- * If SMS_API_KEY is not defined, outputs to system logs.
+ * Sends SMS via Wigal Frog SMS API Gateway (Ghana) or Arkesel SMS API.
+ * If no SMS keys are configured, outputs to system logs.
  */
 export async function sendSMS(to: string, message: string): Promise<boolean> {
-  const apiKey = process.env.SMS_API_KEY;
+  const wigalApiKey = process.env.WIGAL_API_KEY;
+  const wigalUsername = process.env.WIGAL_USERNAME;
+  const wigalPassword = process.env.WIGAL_PASSWORD;
+  const arkeselApiKey = process.env.SMS_API_KEY;
   const senderId = process.env.SMS_SENDER_ID || "ScrinHouse";
   const normalizedTo = normalizePhoneNumber(to);
 
-  if (!apiKey) {
+  // If no SMS gateway keys configured, mock log to console
+  if (!wigalApiKey && !wigalUsername && !arkeselApiKey) {
     console.log(`[MOCK SMS] To: ${normalizedTo} | Sender: ${senderId}\nMessage: "${message}"\n`);
     return true;
   }
 
   try {
+    // 1. Wigal Frog Gateway Integration (Ghana)
+    if (wigalApiKey || (wigalUsername && wigalPassword)) {
+      const endpoint = process.env.WIGAL_SMS_URL || "https://sms.wigal.com.gh/api/v2/send_sms";
+      const payload = wigalApiKey
+        ? {
+            key: wigalApiKey,
+            sender: senderId,
+            destinations: [normalizedTo],
+            to: normalizedTo,
+            message,
+          }
+        : {
+            username: wigalUsername,
+            password: wigalPassword,
+            sender: senderId,
+            destinations: [normalizedTo],
+            to: normalizedTo,
+            message,
+          };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(wigalApiKey ? { "Authorization": `Bearer ${wigalApiKey}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error(`Wigal SMS delivery error: HTTP ${res.status} - ${errText}`);
+        return false;
+      }
+      return true;
+    }
+
+    // 2. Arkesel Gateway Integration Fallback
     const res = await fetch("https://sms.arkesel.com/api/v2/sms/send", {
       method: "POST",
       headers: {
-        "api-key": apiKey,
+        "api-key": arkeselApiKey!,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

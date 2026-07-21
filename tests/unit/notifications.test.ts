@@ -47,7 +47,38 @@ describe("sendSMS API call", () => {
     consoleSpy.mockRestore();
   });
 
+  it("calls Wigal Frog SMS API if WIGAL_API_KEY is defined", async () => {
+    process.env.WIGAL_API_KEY = "wigal-test-key";
+    process.env.SMS_SENDER_ID = "ScrinHouseGH";
+
+    const mockFetch = vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      text: async () => "SUCCESS",
+    } as Response);
+
+    const success = await sendSMS("0241234567", "Wigal Test Message");
+    expect(success).toBe(true);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://sms.wigal.com.gh/api/v2/send_sms",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Authorization": "Bearer wigal-test-key",
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({
+          key: "wigal-test-key",
+          sender: "ScrinHouseGH",
+          destinations: ["233241234567"],
+          to: "233241234567",
+          message: "Wigal Test Message",
+        }),
+      })
+    );
+  });
+
   it("calls Arkesel SMS API if SMS_API_KEY is defined", async () => {
+    process.env.WIGAL_API_KEY = "";
     process.env.SMS_API_KEY = "test-api-key";
     process.env.SMS_SENDER_ID = "ScrinHouseTest";
 
