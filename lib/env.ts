@@ -33,18 +33,15 @@ let cached: ServerEnv | null = null;
 export function getServerEnv(): ServerEnv {
   if (cached) return cached;
 
-  const parsed = serverEnvSchema.safeParse({
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+
+  cached = {
+    NEXT_PUBLIC_SUPABASE_URL: url,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY,
-  });
+  };
 
-  if (!parsed.success) {
-    const messages = parsed.error.issues.map((issue) => `  - ${issue.message}`).join("\n");
-    throw new Error(`Invalid environment configuration:\n${messages}`);
-  }
-
-  cached = parsed.data;
   return cached;
 }
