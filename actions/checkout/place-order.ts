@@ -47,9 +47,8 @@ export async function placeOrder(
 
   // ── Stock & Financial Validation ───────────────────────────────────────────
   const variantIds = cartItems.map((i) => i.variantId);
-  const { data: variants, error: variantErr } = await supabase
-    .from("product_variants")
-    .select("id, sku, price, stock_quantity, is_active")
+  const { data: variants, error: variantErr } = await (supabase.from("product_variants") as any)
+    .select("id, sku, price, stock_quantity, is_active, products(product_type)")
     .in("id", variantIds);
 
   if (variantErr) throw new Error(`Stock check failed: ${variantErr.message}`);
@@ -57,7 +56,7 @@ export async function placeOrder(
   let calculatedSubtotal = 0;
 
   for (const item of cartItems) {
-    const variant = variants?.find((v) => v.id === item.variantId);
+    const variant = variants?.find((v: any) => v.id === item.variantId);
     if (!variant || !variant.is_active) {
       throw new Error(`"${item.name}" is no longer available.`);
     }
@@ -67,7 +66,11 @@ export async function placeOrder(
       );
     }
 
-    // C-01 Fix: Use verified database variant price for financial calculations
+    const productType = (variant as any).products?.product_type;
+    if (item.isInstallment && productType !== "phone") {
+      throw new Error(`Installment payment plan is only available for phones.`);
+    }
+
     const realPrice = Number(variant.price);
     if (item.isInstallment) {
       // Calculate verified deposit amount from server math (e.g. 40% deposit of 20% markup)
@@ -143,7 +146,7 @@ export async function placeOrder(
   }
 
   // ── Insert order items ────────────────────────────────────────────────────
-  const variantMap = new Map((variants ?? []).map((v) => [v.id, v]));
+  const variantMap = new Map((variants as any[] ?? []).map((v: any) => [v.id, v]));
   const orderItems = cartItems.map((item) => ({
     order_id: order.id,
     variant_id: item.variantId,
