@@ -77,7 +77,7 @@ export function HeaderSearch({ isMobile }: { isMobile?: boolean }) {
           onFocus={() => {
             if (suggestions.length > 0) setIsOpen(true);
           }}
-          className="w-full rounded-full pl-9 bg-muted/40 border-border text-xs sm:text-sm h-9"
+          className="w-full rounded-full pl-9 bg-muted/40 border-border text-base sm:text-sm h-9"
           autoComplete="off"
         />
         {loading && (

@@ -11,6 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { listTopLevelCategories } from "@/services/catalog-service";
 import { HeaderSearch } from "@/components/layout/header-search";
+import { MobileSearchToggle } from "@/components/layout/mobile-search-toggle";
 import { CartButton } from "@/components/layout/cart-button";
 
 const STATIC_LINKS = [
@@ -136,6 +137,8 @@ export async function Header() {
             </span>
           </Link>
 
+          <MobileSearchToggle />
+
           <div className="mx-1 h-4 w-px bg-border hidden sm:block" />
 
           <HeaderSearch />
@@ -143,10 +146,6 @@ export async function Header() {
           {/* Cart button — client island (badge + drawer) */}
           <CartButton />
         </div>
-      </div>
-      {/* Mobile Search Bar - Directly under the main header line */}
-      <div className="border-t border-border px-4 py-2 sm:hidden bg-white">
-        <HeaderSearch isMobile />
       </div>
     </header>
   );
