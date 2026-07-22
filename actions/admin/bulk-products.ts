@@ -99,6 +99,25 @@ export async function importBulkProducts(
         }
       }
 
+      // Normalize product_type format to match database enum ("phone" | "accessory" | "repair_part")
+      let productTypeValue: "phone" | "accessory" | "repair_part" = "phone";
+      if (row.productType) {
+        const normalized = row.productType.trim().toLowerCase();
+        if (normalized === "phone" || normalized === "phones") {
+          productTypeValue = "phone";
+        } else if (normalized === "accessory" || normalized === "accessories") {
+          productTypeValue = "accessory";
+        } else if (
+          normalized === "repair_part" ||
+          normalized === "repair" ||
+          normalized === "part" ||
+          normalized === "repair-part" ||
+          normalized === "repairs"
+        ) {
+          productTypeValue = "repair_part";
+        }
+      }
+
       // Insert/Upsert product
       const productPayload = {
         category_id: categoryId,
@@ -106,7 +125,7 @@ export async function importBulkProducts(
         name: row.name,
         slug: row.slug,
         description: row.description || null,
-        product_type: row.productType || "phone",
+        product_type: productTypeValue,
         condition: conditionValue,
         sku: row.sku,
         base_price: Number(row.basePrice),
