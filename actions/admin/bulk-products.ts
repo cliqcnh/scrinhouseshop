@@ -88,6 +88,17 @@ export async function importBulkProducts(
         brandId = brandMap.get(row.brandName.toLowerCase().trim()) ?? null;
       }
 
+      // Normalize condition format to match database enum ("brand_new" | "uk_used" | null)
+      let conditionValue: "brand_new" | "uk_used" | null = null;
+      if (row.condition) {
+        const normalized = row.condition.trim().toLowerCase().replace(/[\s_-]+/g, "_");
+        if (normalized === "brand_new" || normalized === "brandnew" || normalized === "new") {
+          conditionValue = "brand_new";
+        } else if (normalized === "uk_used" || normalized === "ukused" || normalized === "used") {
+          conditionValue = "uk_used";
+        }
+      }
+
       // Insert/Upsert product
       const productPayload = {
         category_id: categoryId,
@@ -96,7 +107,7 @@ export async function importBulkProducts(
         slug: row.slug,
         description: row.description || null,
         product_type: row.productType || "phone",
-        condition: row.condition || null,
+        condition: conditionValue,
         sku: row.sku,
         base_price: Number(row.basePrice),
         compare_at_price: row.compareAtPrice ? Number(row.compareAtPrice) : null,
