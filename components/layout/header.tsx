@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Menu, User, Search } from "lucide-react";
+import { Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -53,18 +52,7 @@ export async function Header() {
             <SheetHeader>
               <SheetTitle>ScrinHouse<sup className="text-[10px] font-bold uppercase ml-0.5 align-super">GH</sup></SheetTitle>
             </SheetHeader>
-            <div className="px-4 py-3">
-              <form action="/search" method="GET" className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  name="q"
-                  type="search"
-                  placeholder="Search phones, parts..."
-                  className="w-full rounded-full pl-9 text-xs h-9 bg-muted/40 border-border"
-                />
-              </form>
-            </div>
-            <nav className="flex flex-col gap-1 px-4 mt-2">
+            <nav className="flex flex-col gap-1 px-4 mt-4">
               {categories.map((category) => (
                 <Link
                   key={category.id}
@@ -155,6 +143,10 @@ export async function Header() {
           {/* Cart button — client island (badge + drawer) */}
           <CartButton />
         </div>
+      </div>
+      {/* Mobile Search Bar - Directly under the main header line */}
+      <div className="border-t border-border px-4 py-2 sm:hidden bg-white">
+        <HeaderSearch isMobile />
       </div>
     </header>
   );

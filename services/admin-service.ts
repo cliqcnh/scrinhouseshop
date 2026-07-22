@@ -72,6 +72,7 @@ export async function getDashboardStats(): Promise<AdminDashboardStats> {
 export interface AdminProductRow {
   id: string;
   name: string;
+  slug: string;
   sku: string;
   productType: string;
   basePrice: number;
@@ -87,6 +88,7 @@ export interface AdminProductRow {
 interface RawAdminProductRow {
   id: string;
   name: string;
+  slug: string;
   sku: string;
   product_type: string;
   base_price: number;
@@ -105,7 +107,7 @@ export async function listAdminProducts(query?: string): Promise<AdminProductRow
   let request = supabase
     .from("products")
     .select<string, RawAdminProductRow>(
-      `id, name, sku, product_type, base_price, is_active, is_featured, updated_at,
+      `id, name, slug, sku, product_type, base_price, is_active, is_featured, updated_at,
        category:categories!products_category_id_fkey ( name ),
        brand:brands ( name ),
        product_images ( url, is_primary ),
@@ -127,6 +129,7 @@ export async function listAdminProducts(query?: string): Promise<AdminProductRow
     return {
       id: row.id,
       name: row.name,
+      slug: row.slug,
       sku: row.sku,
       productType: row.product_type,
       basePrice: row.base_price,

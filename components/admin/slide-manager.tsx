@@ -16,13 +16,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { HomeSlide } from "@/types/catalog";
+import type { AdminProductRow } from "@/services/admin-service";
 import { deleteSlide, saveSlide } from "@/actions/admin/slides";
 
-export function SlideManager({ slides }: { slides: HomeSlide[] }) {
+export function SlideManager({
+  slides,
+  products = [],
+}: {
+  slides: HomeSlide[];
+  products?: AdminProductRow[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<HomeSlide | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isLinkFocused, setIsLinkFocused] = useState(false);
 
   // Form states
   const [title, setTitle]             = useState("");
@@ -108,6 +116,15 @@ export function SlideManager({ slides }: { slides: HomeSlide[] }) {
     router.refresh();
   }
 
+  const suggestions = (products ?? []).filter((p) => {
+    if (!linkUrl) return false;
+    const query = linkUrl.startsWith("/products/") ? linkUrl.replace("/products/", "") : linkUrl;
+    return (
+      p.name.toLowerCase().includes(query.toLowerCase()) ||
+      p.slug.toLowerCase().includes(query.toLowerCase())
+    );
+  }).slice(0, 5);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -160,14 +177,34 @@ export function SlideManager({ slides }: { slides: HomeSlide[] }) {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 relative">
                 <Label htmlFor="slide-link">Link URL</Label>
                 <Input
                   id="slide-link"
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
+                  onFocus={() => setIsLinkFocused(true)}
+                  onBlur={() => setIsLinkFocused(false)}
                   placeholder="e.g. /category/phones"
+                  autoComplete="off"
                 />
+                {isLinkFocused && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto border border-border bg-white shadow-xl text-xs rounded-none">
+                    {suggestions.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onMouseDown={() => {
+                          setLinkUrl(`/products/${p.slug}`);
+                          setIsLinkFocused(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-muted font-medium transition-colors border-b border-border last:border-0 block text-foreground bg-white"
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="slide-btn">Button Text</Label>
