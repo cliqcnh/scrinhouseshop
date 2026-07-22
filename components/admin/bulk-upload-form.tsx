@@ -229,8 +229,19 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
           <div className="flex items-center gap-3">
             <Input
               type="file"
-              accept=".csv"
-              onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
+              accept=".csv, .xlsx, .xls"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                if (file && (file.name.endsWith(".xlsx") || file.name.endsWith(".xls"))) {
+                  toast.error("Excel sheets (.xlsx) cannot be imported directly. In Excel, please click 'File' -> 'Save As' -> choose 'Comma Separated Values (.csv)' and upload that CSV file.", {
+                    duration: 10000,
+                  });
+                  setCsvFile(null);
+                  e.target.value = "";
+                } else {
+                  setCsvFile(file);
+                }
+              }}
               className="max-w-md text-xs cursor-pointer"
             />
             {csvFile && <FileText className="size-5 text-primary animate-pulse" />}
