@@ -44,7 +44,27 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
     const lines = text.split(/\r?\n/);
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/^["']|["']$/g, ""));
+    const headers = lines[0].split(",").map((h) => {
+      const clean = h.trim().toLowerCase().replace(/^["']|["']$/g, "").replace(/[\s_-]+/g, "");
+      const map: Record<string, string> = {
+        name: "name",
+        slug: "slug",
+        description: "description",
+        categoryname: "categoryName",
+        brandname: "brandName",
+        producttype: "productType",
+        condition: "condition",
+        sku: "sku",
+        baseprice: "basePrice",
+        compareatprice: "compareAtPrice",
+        tags: "tags",
+        isfeatured: "isFeatured",
+        isactive: "isActive",
+        variantsstring: "variantsString",
+        imagenames: "imageNames"
+      };
+      return map[clean] || clean;
+    });
     const products: BulkImportProduct[] = [];
 
     const parseCSVRow = (rowLine: string): string[] => {

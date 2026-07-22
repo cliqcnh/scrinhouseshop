@@ -147,3 +147,38 @@ export async function deleteProductImage(imageId: string, productId: string): Pr
   revalidatePath(`/admin/products/${productId}`);
   return { success: true };
 }
+
+export async function bulkUpdateProducts(
+  productIds: string[],
+  action: "delete" | "active" | "inactive" | "featured" | "unfeatured",
+): Promise<ActionResult> {
+  await requireStaffUser();
+  if (productIds.length === 0) return { success: true };
+  const supabase = await createClient();
+
+  let error;
+  if (action === "delete") {
+    // Clean up variants and images first to prevent FK constraint issues
+    await supabase.from("product_variants").delete().in("product_id", productIds);
+    await supabase.from("product_images").delete().in("product_id", productIds);
+    const res = await supabase.from("products").delete().in("id", productIds);
+    error = res.error;
+  } else if (action === "active") {
+    const res = await supabase.from("products").update({ is_active: true }).in("id", productIds);
+    error = res.error;
+  } else if (action === "inactive") {
+    const res = await supabase.from("products").update({ is_active: false }).in("id", productIds);
+    error = res.error;
+  } else if (action === "featured") {
+    const res = await supabase.from("products").update({ is_featured: true }).in("id", productIds);
+    error = res.error;
+  } else if (action === "unfeatured") {
+    const res = await supabase.from("products").update({ is_featured: false }).in("id", productIds);
+    error = res.error;
+  }
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/admin/products");
+  return { success: true };
+}
