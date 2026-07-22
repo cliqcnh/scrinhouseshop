@@ -44,7 +44,20 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
     const lines = text.split(/\r?\n/);
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(",").map((h) => {
+    // Auto-detect delimiter: comma, semicolon, or tab
+    const firstLine = lines[0];
+    const commas = (firstLine.match(/,/g) || []).length;
+    const semicolons = (firstLine.match(/;/g) || []).length;
+    const tabs = (firstLine.match(/\t/g) || []).length;
+
+    let delimiter = ",";
+    if (semicolons > commas && semicolons > tabs) {
+      delimiter = ";";
+    } else if (tabs > commas && tabs > semicolons) {
+      delimiter = "\t";
+    }
+
+    const headers = lines[0].split(delimiter).map((h) => {
       const clean = h.trim().toLowerCase().replace(/^["']|["']$/g, "").replace(/[\s_-]+/g, "");
       const map: Record<string, string> = {
         name: "name",
@@ -75,7 +88,7 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
         const char = rowLine[i];
         if (char === '"') {
           inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
+        } else if (char === delimiter && !inQuotes) {
           result.push(current);
           current = "";
         } else {
