@@ -41,7 +41,8 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
 
   // Parse CSV client-side into JSON objects
   function parseCSV(text: string): BulkImportProduct[] {
-    const lines = text.split(/\r?\n/);
+    const cleanText = text.replace(/^\uFEFF/, "");
+    const lines = cleanText.split(/\r?\n/);
     if (lines.length < 2) return [];
 
     // Auto-detect delimiter: comma, semicolon, or tab
@@ -58,25 +59,7 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
     }
 
     const headers = lines[0].split(delimiter).map((h) => {
-      const clean = h.trim().toLowerCase().replace(/^["']|["']$/g, "").replace(/[\s_-]+/g, "");
-      const map: Record<string, string> = {
-        name: "name",
-        slug: "slug",
-        description: "description",
-        categoryname: "categoryName",
-        brandname: "brandName",
-        producttype: "productType",
-        condition: "condition",
-        sku: "sku",
-        baseprice: "basePrice",
-        compareatprice: "compareAtPrice",
-        tags: "tags",
-        isfeatured: "isFeatured",
-        isactive: "isActive",
-        variantsstring: "variantsString",
-        imagenames: "imageNames"
-      };
-      return map[clean] || clean;
+      return h.trim().toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "").replace(/[\s_-]+/g, "");
     });
     const products: BulkImportProduct[] = [];
 
@@ -107,10 +90,10 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
       const row: Record<string, string | number | boolean | undefined> = {};
       headers.forEach((header, index) => {
         const val = values[index] ?? "";
-        if (header === "basePrice" || header === "compareAtPrice") {
+        if (header === "baseprice" || header === "compareatprice") {
           const cleanNum = val.replace(/[^\d.]/g, "");
           row[header] = cleanNum ? Number(cleanNum) : 0;
-        } else if (header === "isFeatured" || header === "isActive") {
+        } else if (header === "isfeatured" || header === "isactive") {
           row[header] = val.toLowerCase() === "true";
         } else {
           row[header] = val;
@@ -121,18 +104,18 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
         name: (row.name as string) ?? "",
         slug: (row.slug as string) ?? "",
         description: (row.description as string) ?? "",
-        categoryName: (row.categoryName as string) ?? "",
-        brandName: (row.brandName as string) ?? "",
-        productType: ((row.productType as string) ?? "phone") as "phone" | "accessory" | "repair_part",
+        categoryName: (row.categoryname as string) ?? "",
+        brandName: (row.brandname as string) ?? "",
+        productType: ((row.producttype as string) ?? "phone") as "phone" | "accessory" | "repair_part",
         condition: ((row.condition as string) ?? "") as "brand_new" | "uk_used" | "",
         sku: (row.sku as string) ?? "",
-        basePrice: (row.basePrice as number) ?? 0,
-        compareAtPrice: (row.compareAtPrice as number) || undefined,
+        basePrice: (row.baseprice as number) ?? 0,
+        compareAtPrice: (row.compareatprice as number) || undefined,
         tags: (row.tags as string) ?? "",
-        isFeatured: !!row.isFeatured,
-        isActive: row.isActive !== false,
-        variantsString: (row.variantsString as string) ?? "",
-        imageNames: (row.imageNames as string) ?? "",
+        isFeatured: !!row.isfeatured,
+        isActive: row.isactive !== false,
+        variantsString: (row.variantsstring as string) ?? "",
+        imageNames: (row.imagenames as string) ?? "",
       });
     }
 
