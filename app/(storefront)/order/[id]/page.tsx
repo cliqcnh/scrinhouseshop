@@ -58,7 +58,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
 
   if (!orderRaw) notFound();
   const order = orderRaw as unknown as OrderRow;
-  const address = order.delivery_address;
+  const address = order.delivery_address || {};
 
   const isMock = mock === "1";
   const isPendingPayment = order.status === "pending_payment";

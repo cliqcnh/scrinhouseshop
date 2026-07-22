@@ -5,8 +5,8 @@ export const metadata = { title: "Bulk Product Import - Admin" };
 
 export default async function BulkImportPage() {
   const [categoryTree, brands] = await Promise.all([getCategoryTree(), listBrands()]);
-  // Flatten tree to get parent and child categories
-  const categories = categoryTree.flatMap((c) => [c, ...c.children]);
+  // Flatten tree to get parent and child categories safely
+  const categories = (categoryTree || []).flatMap((c) => [c, ...(c.children || [])]);
 
   return (
     <div className="max-w-4xl space-y-6">
