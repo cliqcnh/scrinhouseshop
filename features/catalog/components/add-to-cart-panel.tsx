@@ -61,7 +61,10 @@ export function AddToCartPanel({
       (v) => (!storages.length || v.storage === selectedStorage) && (!colors.length || v.color === selectedColor),
     ) ?? product.variants[0];
 
-  const isEligibleForInstallment = product.productType === "phone";
+  const isEligibleForInstallment =
+    product.productType === "phone" &&
+    product.category?.slug !== "screens" &&
+    !product.name.toLowerCase().includes("screen");
   const currentPrice = selectedVariant?.price ?? product.basePrice;
   const installment = useMemo(() => calculateInstallment(currentPrice, installmentConfig), [currentPrice, installmentConfig]);
 

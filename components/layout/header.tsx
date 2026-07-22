@@ -125,6 +125,8 @@ export async function Header() {
 
         {/* Right actions */}
         <div className="ml-auto flex items-center gap-0.5">
+          <MobileSearchToggle />
+
           {/* Auth link — server-rendered, reflects current session */}
           <Link
             href="/account"
@@ -136,8 +138,6 @@ export async function Header() {
               {displayName ? `Hi, ${displayName}` : "Login / Register"}
             </span>
           </Link>
-
-          <MobileSearchToggle />
 
           <div className="mx-1 h-4 w-px bg-border hidden sm:block" />
 

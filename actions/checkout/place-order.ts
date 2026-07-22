@@ -48,7 +48,7 @@ export async function placeOrder(
   // ── Stock & Financial Validation ───────────────────────────────────────────
   const variantIds = cartItems.map((i) => i.variantId);
   const { data: variants, error: variantErr } = await (supabase.from("product_variants") as any)
-    .select("id, sku, price, stock_quantity, is_active, products(product_type)")
+    .select("id, sku, price, stock_quantity, is_active, products(name, product_type)")
     .in("id", variantIds);
 
   if (variantErr) throw new Error(`Stock check failed: ${variantErr.message}`);
@@ -67,7 +67,9 @@ export async function placeOrder(
     }
 
     const productType = (variant as any).products?.product_type;
-    if (item.isInstallment && productType !== "phone") {
+    const productName = (variant as any).products?.name || "";
+    const isScreen = productName.toLowerCase().includes("screen");
+    if (item.isInstallment && (productType !== "phone" || isScreen)) {
       throw new Error(`Installment payment plan is only available for phones.`);
     }
 
