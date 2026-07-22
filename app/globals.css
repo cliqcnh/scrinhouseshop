@@ -135,4 +135,19 @@
   h1, h2, h3, h4 {
     @apply font-heading;
   }
+
+  /* Tap micro-interactions */
+  button:active,
+  a:active,
+  [role="button"]:active,
+  .product-card:active {
+    transform: scale(0.97);
+  }
+
+  button,
+  a,
+  [role="button"],
+  .product-card {
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease, opacity 0.15s ease;
+  }
 }
