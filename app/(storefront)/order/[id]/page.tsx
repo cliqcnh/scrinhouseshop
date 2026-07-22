@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, AlertCircle } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatPrice } from "@/utils/format";
+import { PaymentRetryButton } from "./payment-retry-button";
 
 interface OrderItemRow {
   id: string;
@@ -28,7 +29,7 @@ interface OrderRow {
   order_items: OrderItemRow[];
 }
 
-export const metadata: Metadata = { title: "Order confirmed" };
+export const metadata: Metadata = { title: "Order Details" };
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -60,20 +61,43 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   const address = order.delivery_address;
 
   const isMock = mock === "1";
+  const isPendingPayment = order.status === "pending_payment";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
-      {/* Success header */}
+      {/* Success / Pending header */}
       <div className="mb-10 text-center">
-        <CheckCircle className="mx-auto mb-4 size-12 text-foreground" strokeWidth={1.5} />
+        {isPendingPayment ? (
+          <AlertCircle className="mx-auto mb-4 size-12 text-yellow-600" strokeWidth={1.5} />
+        ) : (
+          <CheckCircle className="mx-auto mb-4 size-12 text-foreground" strokeWidth={1.5} />
+        )}
+        
         <h1 className="font-heading text-2xl font-bold text-foreground sm:text-3xl">
-          {isMock ? "Order placed (test mode)" : "Order confirmed!"}
+          {isPendingPayment
+            ? "Payment Pending"
+            : isMock
+            ? "Order placed (test mode)"
+            : "Order confirmed!"}
         </h1>
+        
         <p className="mt-2 text-sm text-muted-foreground">
-          {isMock
+          {isPendingPayment
+            ? "Your payment is pending. Please complete payment using the button below to secure your items."
+            : isMock
             ? "No real payment was taken. Add a Paystack secret key to enable live payments."
             : "Thank you for your order. We'll send you an update when it ships."}
         </p>
+
+        {isPendingPayment && (
+          <div className="mx-auto mt-6 max-w-sm border border-border p-4 bg-muted/20">
+            <p className="text-xs text-muted-foreground mb-3 text-left">
+              Amount Due: <span className="font-semibold text-foreground">{formatPrice(order.total)}</span>
+            </p>
+            <PaymentRetryButton orderId={order.id} />
+          </div>
+        )}
+
         {order.paystack_ref && (
           <p className="mt-3 text-xs text-muted-foreground">
             Reference: <span className="font-mono font-medium text-foreground">{order.paystack_ref}</span>

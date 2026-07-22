@@ -19,9 +19,14 @@ export default async function AdminProductsPage() {
           <h1 className="font-heading text-2xl font-bold text-foreground">Products</h1>
           <p className="text-sm text-muted-foreground">{products.length} products</p>
         </div>
-        <Button render={<Link href="/admin/products/new" />}>
-          <Plus className="size-4" /> Add product
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" render={<Link href="/admin/products/bulk" />}>
+            Bulk Import
+          </Button>
+          <Button render={<Link href="/admin/products/new" />}>
+            <Plus className="size-4" /> Add product
+          </Button>
+        </div>
       </div>
 
       {products.length === 0 ? (
