@@ -47,15 +47,30 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
     const headers = lines[0].split(",").map((h) => h.trim().replace(/^["']|["']$/g, ""));
     const products: BulkImportProduct[] = [];
 
+    const parseCSVRow = (rowLine: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < rowLine.length; i++) {
+        const char = rowLine[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      result.push(current);
+      return result;
+    };
+
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
 
-      // Handle simple comma separation (ignoring internal quote commas for simplicity, or using simple regex)
-      // Standard CSV parsing regex matching unquoted fields or double-quoted fields
-      const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(",");
-      const values = matches.map((v) => v.trim().replace(/^["']|["']$/g, ""));
-
+      const values = parseCSVRow(line).map((v) => v.trim().replace(/^["']|["']$/g, ""));
       const row: Record<string, string | number | boolean | undefined> = {};
       headers.forEach((header, index) => {
         const val = values[index] ?? "";
