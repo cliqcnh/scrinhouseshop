@@ -25,7 +25,7 @@ export const productFormSchema = z.object({
   condition: z.enum(["brand_new", "uk_used"]).optional().or(z.literal("")),
   sku: z.string().trim().min(1, "SKU is required"),
   basePrice: z.number().min(0, "Price must be positive"),
-  compareAtPrice: z.number().min(0).optional(),
+  compareAtPrice: z.number().min(0).or(z.nan()).optional(),
   tags: z.string().trim().optional(),
   isFeatured: z.boolean(),
   isActive: z.boolean(),

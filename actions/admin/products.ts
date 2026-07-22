@@ -31,7 +31,7 @@ export async function saveProduct(values: ProductFormValues): Promise<ActionResu
     condition: data.condition || null,
     sku: data.sku,
     base_price: data.basePrice,
-    compare_at_price: data.compareAtPrice === undefined ? null : data.compareAtPrice,
+    compare_at_price: (data.compareAtPrice === undefined || Number.isNaN(data.compareAtPrice)) ? null : data.compareAtPrice,
     tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
     is_featured: data.isFeatured,
     is_active: data.isActive,
