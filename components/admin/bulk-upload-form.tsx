@@ -108,7 +108,8 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
       headers.forEach((header, index) => {
         const val = values[index] ?? "";
         if (header === "basePrice" || header === "compareAtPrice") {
-          row[header] = val ? Number(val) : 0;
+          const cleanNum = val.replace(/[^\d.]/g, "");
+          row[header] = cleanNum ? Number(cleanNum) : 0;
         } else if (header === "isFeatured" || header === "isActive") {
           row[header] = val.toLowerCase() === "true";
         } else {

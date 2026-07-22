@@ -66,7 +66,7 @@ export async function importBulkProducts(
       // Basic validations
       const rawPrice = Number(row.basePrice);
       if (!row.name || !row.slug || !row.sku || isNaN(rawPrice) || rawPrice <= 0) {
-        errors.push(`Row ${rowNum}: Missing or invalid required product info (Name, Slug, SKU, or a valid positive Base Price).`);
+        errors.push(`Row ${rowNum} (${row.name || "Unnamed"}): Missing/invalid required details. Received Name: "${row.name || ""}", Slug: "${row.slug || ""}", SKU: "${row.sku || ""}", Base Price: "${row.basePrice}" (parsed: ${rawPrice}).`);
         continue;
       }
 
