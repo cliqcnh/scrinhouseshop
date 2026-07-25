@@ -38,7 +38,7 @@ export default async function HomePage({ searchParams }: Props) {
       />
 
       {/* ── New Arrivals ────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <section id="new-arrivals" className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -65,7 +65,7 @@ export default async function HomePage({ searchParams }: Props) {
                 return (
                   <Link
                     key={category.id}
-                    href={`/?category=${category.slug}`}
+                    href={`/?category=${category.slug}#new-arrivals`}
                     scroll={false}
                     className={`pb-2 text-xs font-semibold uppercase tracking-widest transition-colors ${
                       isActive
