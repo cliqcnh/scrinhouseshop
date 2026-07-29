@@ -12,6 +12,7 @@ import { getWishlistProductIds } from "@/actions/storefront/wishlist";
 import { getInstallmentConfig } from "@/actions/admin/installments";
 import { listProductReviews } from "@/actions/storefront/reviews";
 import { ProductReviews } from "@/components/storefront/product-reviews";
+import { EnquiryForm } from "@/components/storefront/enquiry-form";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -110,6 +111,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
               ))}
             </div>
           )}
+
+          <EnquiryForm productId={product.id} productName={product.name} />
         </div>
       </div>
 

@@ -463,6 +463,74 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["repair_bookings"]["Row"]>;
         Relationships: [];
       };
+      product_enquiries: {
+        Row: {
+          id: string;
+          product_id: string;
+          customer_name: string;
+          customer_phone: string;
+          customer_email: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          customer_name: string;
+          customer_phone: string;
+          customer_email: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          customer_name?: string;
+          customer_phone?: string;
+          customer_email?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_enquiries_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      product_enquiry_messages: {
+        Row: {
+          id: string;
+          enquiry_id: string;
+          sender: string;
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          enquiry_id: string;
+          sender: string;
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          enquiry_id?: string;
+          sender?: string;
+          message?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_enquiry_messages_enquiry_id_fkey";
+            columns: ["enquiry_id"];
+            referencedRelation: "product_enquiries";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

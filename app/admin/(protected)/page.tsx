@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { Package, FolderTree, Tag, AlertTriangle, PackageX, Star, DollarSign, ShoppingCart, Wrench } from "lucide-react";
 import { StatCard } from "@/components/admin/stat-card";
-import { getDashboardStats } from "@/services/admin-service";
+import { getDashboardStats, listAdminProducts } from "@/services/admin-service";
 import { formatPrice } from "@/utils/format";
+import { DashboardSearch } from "@/components/admin/dashboard-search";
 
 export const metadata = { title: "Dashboard" };
 
 export default async function AdminDashboardPage() {
-  const stats = await getDashboardStats();
+  const [stats, products] = await Promise.all([
+    getDashboardStats(),
+    listAdminProducts(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -59,6 +63,8 @@ export default async function AdminDashboardPage() {
           value={stats.outOfStockVariants}
         />
       </div>
+
+      <DashboardSearch products={products} />
 
       <div className="rounded-lg border border-border bg-background p-5">
         <h2 className="text-sm font-semibold text-foreground">Quick links</h2>

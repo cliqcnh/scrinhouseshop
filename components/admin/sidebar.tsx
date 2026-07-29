@@ -17,6 +17,7 @@ import {
   CreditCard,
   RefreshCw,
   Ticket,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ const NAV_SECTIONS = [
     label: "Operations",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+      { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare },
       { href: "/admin/installments", label: "Installments", icon: CreditCard },
       { href: "/admin/trade-ins", label: "Trade-Ins", icon: RefreshCw },
       { href: "/admin/coupons", label: "Coupons", icon: Ticket },
