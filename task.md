@@ -12,6 +12,7 @@
 ## 4. Admin Actions Defense-in-Depth Staff Guards
 - [x] `actions/admin/orders.ts` — Add `await requireStaffUser()`.
 - [x] `actions/admin/coupons.ts` — Add `await requireStaffUser()`.
+- [x] `actions/admin/market-days.ts` — Add `await requireStaffUser()`.
 - [x] `actions/admin/installments.ts` — Add `await requireStaffUser()`.
 - [x] `actions/admin/repairs.ts` — Add `await requireStaffUser()`.
 - [x] `actions/admin/trade-ins.ts` — Add `await requireStaffUser()`.

@@ -10,6 +10,9 @@ import {
   listHomeSlides,
 } from "@/services/catalog-service";
 
+import { getMarketState, getNextEventStart } from "@/actions/storefront/market-days";
+import { MarketBanner } from "@/components/storefront/market-banner";
+
 interface Props {
   searchParams: Promise<{ category?: string }>;
 }
@@ -17,9 +20,10 @@ interface Props {
 export default async function HomePage({ searchParams }: Props) {
   const { category: activeCategorySlug } = await searchParams;
 
-  const [topLevelCategories, slides] = await Promise.all([
+  const [topLevelCategories, slides, marketState] = await Promise.all([
     listTopLevelCategories(),
     listHomeSlides(),
+    getMarketState(),
   ]);
 
   const activeCategory = (topLevelCategories as any[]).find((c: any) => c.slug === activeCategorySlug) || topLevelCategories[0];
@@ -28,8 +32,20 @@ export default async function HomePage({ searchParams }: Props) {
   const featuredProducts = await getFeaturedProducts(8, activeCategoryId);
   const heroProduct = featuredProducts[0];
 
+  let nextEventDate = null;
+  if (!marketState.isLive && marketState.event) {
+    nextEventDate = (await getNextEventStart(marketState.event.day, marketState.event.startTime)).toISOString();
+  }
+
   return (
     <div className="bg-white">
+      {/* ── Market Days Active Promo Banner ────────────────────────────── */}
+      <MarketBanner
+        isLive={marketState.isLive}
+        nextEventDate={nextEventDate}
+        eventTitle={marketState.event?.title || null}
+      />
+
       {/* ── Hero Slider Banner ────────────────────────────────────────── */}
       <HeroSlider 
         slides={slides} 

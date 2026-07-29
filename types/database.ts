@@ -531,9 +531,290 @@ export interface Database {
           }
         ];
       };
+      market_events: {
+        Row: {
+          id: string;
+          day: string;
+          start_time: string;
+          end_time: string;
+          title: string;
+          banner_url: string | null;
+          theme_image_url: string | null;
+          announcement: string | null;
+          is_enabled: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          day: string;
+          start_time: string;
+          end_time: string;
+          title: string;
+          banner_url?: string | null;
+          theme_image_url?: string | null;
+          announcement?: string | null;
+          is_enabled?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          day?: string;
+          start_time?: string;
+          end_time?: string;
+          title?: string;
+          banner_url?: string | null;
+          theme_image_url?: string | null;
+          announcement?: string | null;
+          is_enabled?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      market_products: {
+        Row: {
+          id: string;
+          event_id: string;
+          product_id: string;
+          sale_type: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          product_id: string;
+          sale_type: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          product_id?: string;
+          sale_type?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_products_event_id_fkey";
+            columns: ["event_id"];
+            referencedRelation: "market_events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_products_product_id_fkey";
+            columns: ["product_id"];
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      discount_rules: {
+        Row: {
+          id: string;
+          market_product_id: string;
+          discount_percent: number | null;
+          fixed_price: number | null;
+          limit_quantity: number;
+          limit_per_customer: number;
+          is_featured: boolean;
+          priority: number;
+          stock_remaining: number;
+        };
+        Insert: {
+          id?: string;
+          market_product_id: string;
+          discount_percent?: number | null;
+          fixed_price?: number | null;
+          limit_quantity: number;
+          limit_per_customer?: number;
+          is_featured?: boolean;
+          priority?: number;
+          stock_remaining: number;
+        };
+        Update: {
+          id?: string;
+          market_product_id?: string;
+          discount_percent?: number | null;
+          fixed_price?: number | null;
+          limit_quantity?: number;
+          limit_per_customer?: number;
+          is_featured?: boolean;
+          priority?: number;
+          stock_remaining?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "discount_rules_market_product_id_fkey";
+            columns: ["market_product_id"];
+            referencedRelation: "market_products";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      auction_items: {
+        Row: {
+          id: string;
+          market_product_id: string;
+          starting_price: number;
+          reserve_price: number;
+          min_increment: number;
+          start_time: string;
+          end_time: string;
+          buy_now_price: number | null;
+          auto_extend_minutes: number;
+          is_featured: boolean;
+          status: string;
+        };
+        Insert: {
+          id?: string;
+          market_product_id: string;
+          starting_price: number;
+          reserve_price: number;
+          min_increment: number;
+          start_time: string;
+          end_time: string;
+          buy_now_price?: number | null;
+          auto_extend_minutes?: number;
+          is_featured?: boolean;
+          status?: string;
+        };
+        Update: {
+          id?: string;
+          market_product_id?: string;
+          starting_price?: number;
+          reserve_price?: number;
+          min_increment?: number;
+          start_time?: string;
+          end_time?: string;
+          buy_now_price?: number | null;
+          auto_extend_minutes?: number;
+          is_featured?: boolean;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "auction_items_market_product_id_fkey";
+            columns: ["market_product_id"];
+            referencedRelation: "market_products";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      auction_bids: {
+        Row: {
+          id: string;
+          auction_id: string;
+          user_id: string;
+          amount: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          auction_id: string;
+          user_id: string;
+          amount: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          auction_id?: string;
+          user_id?: string;
+          amount?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "auction_bids_auction_id_fkey";
+            columns: ["auction_id"];
+            referencedRelation: "auction_items";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      auction_winners: {
+        Row: {
+          id: string;
+          auction_id: string;
+          user_id: string | null;
+          winning_bid_id: string | null;
+          order_id: string | null;
+          awarded_at: string;
+          payment_deadline: string;
+          status: string;
+        };
+        Insert: {
+          id?: string;
+          auction_id: string;
+          user_id?: string | null;
+          winning_bid_id?: string | null;
+          order_id?: string | null;
+          awarded_at?: string;
+          payment_deadline: string;
+          status?: string;
+        };
+        Update: {
+          id?: string;
+          auction_id?: string;
+          user_id?: string | null;
+          winning_bid_id?: string | null;
+          order_id?: string | null;
+          awarded_at?: string;
+          payment_deadline?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "auction_winners_auction_id_fkey";
+            columns: ["auction_id"];
+            referencedRelation: "auction_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "auction_winners_order_id_fkey";
+            columns: ["order_id"];
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      market_notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          message: string;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          message: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          message?: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      place_bid: {
+        Args: {
+          p_auction_id: string;
+          p_user_id: string;
+          p_amount: number;
+        };
+        Returns: any;
+      };
+    };
     Enums: {
       account_status: AccountStatus;
       product_type: ProductType;

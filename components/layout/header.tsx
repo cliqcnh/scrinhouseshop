@@ -15,6 +15,7 @@ import { MobileSearchToggle } from "@/components/layout/mobile-search-toggle";
 import { CartButton } from "@/components/layout/cart-button";
 
 const STATIC_LINKS = [
+  { label: "🔥 Market Days", href: "/market-days" },
   { label: "Trade-In & Swap", href: "/trade-in" },
   { label: "Repairs", href: "/repairs" },
   { label: "Track Order", href: "/track" },
@@ -103,6 +104,12 @@ export async function Header() {
               {category.name}
             </Link>
           ))}
+          <Link
+            href="/market-days"
+            className="px-3.5 py-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors"
+          >
+            🔥 Market Days
+          </Link>
           <Link
             href="/trade-in"
             className="px-3.5 py-2 text-sm font-semibold text-[#1d4ed8] hover:text-[#1e40af] transition-colors"

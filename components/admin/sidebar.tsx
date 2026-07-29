@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Ticket,
   MessageSquare,
+  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ const NAV_SECTIONS = [
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
       { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare },
+      { href: "/admin/market-days", label: "Market Days", icon: Flame },
       { href: "/admin/installments", label: "Installments", icon: CreditCard },
       { href: "/admin/trade-ins", label: "Trade-Ins", icon: RefreshCw },
       { href: "/admin/coupons", label: "Coupons", icon: Ticket },
