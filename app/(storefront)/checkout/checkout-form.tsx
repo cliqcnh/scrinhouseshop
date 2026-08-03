@@ -166,7 +166,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
   }
 
   const inputCls =
-    "w-full rounded border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring";
+    "w-full rounded border border-border bg-background px-3 py-2.5 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring";
   const labelCls = "mb-1.5 block text-sm font-medium text-foreground";
 
   return (
@@ -389,7 +389,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                 value={couponInput}
                 onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                 placeholder="PROMO CODE (e.g. WELCOME50)"
-                className="flex-1 border border-border px-3 py-1.5 text-xs focus:border-foreground focus:outline-none rounded-none uppercase font-mono font-semibold"
+                className="flex-1 border border-border px-3 py-1.5 text-base md:text-xs focus:border-foreground focus:outline-none rounded-none uppercase font-mono font-semibold"
               />
               <Button
                 type="button"
