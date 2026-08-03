@@ -16,6 +16,11 @@ export function HeroSlider({ slides, fallbackImage, fallbackName }: HeroSliderPr
   const [activeIndex, setActiveIndex] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Swipe gesture states
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
+
   // Use either DB slides or a default fallback slide
   const items = slides.length > 0 
     ? slides 
@@ -54,13 +59,36 @@ export function HeroSlider({ slides, fallbackImage, fallbackName }: HeroSliderPr
     return () => stopTimer();
   }, [total]);
 
-  const activeItem = items[activeIndex];
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      setActiveIndex((prev) => (prev + 1) % total);
+    } else if (isRightSwipe) {
+      setActiveIndex((prev) => (prev - 1 + total) % total);
+    }
+  };
 
   return (
     <section 
       className="relative overflow-hidden bg-[#f0f0f0]"
       onMouseEnter={stopTimer}
       onMouseLeave={startTimer}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       <div className="mx-auto flex max-w-7xl flex-col px-5 pb-14 pt-6 sm:px-8 lg:grid lg:grid-cols-2 lg:items-center lg:px-8 lg:py-24">
         
