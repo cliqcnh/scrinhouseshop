@@ -87,7 +87,7 @@ export function MarketDaysAdminClient({
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState({
     id: "",
-    day: "tuesday" as "tuesday" | "saturday",
+    day: "tuesday",
     startTime: "09:00:00",
     endTime: "21:00:00",
     title: "",
@@ -645,11 +645,16 @@ export function MarketDaysAdminClient({
                   <label className="text-xs uppercase font-bold text-muted-foreground">Select Day</label>
                   <select
                     value={eventForm.day}
-                    onChange={(e) => setEventForm({ ...eventForm, day: e.target.value as "tuesday" | "saturday" })}
-                    className="w-full rounded-md border border-border bg-muted/20 px-3 py-2 text-sm font-semibold"
+                    onChange={(e) => setEventForm({ ...eventForm, day: e.target.value })}
+                    className="w-full rounded-md border border-border bg-muted/20 px-3 py-2 text-sm font-semibold text-foreground"
                   >
+                    <option value="monday">Monday</option>
                     <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
                     <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
                   </select>
                 </div>
 

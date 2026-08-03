@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export interface AdminEventRow {
   id: string;
-  day: "tuesday" | "saturday";
+  day: string;
   startTime: string;
   endTime: string;
   title: string;
@@ -129,7 +129,7 @@ export async function getAdminEvents(): Promise<AdminEventRow[]> {
 
 export async function saveMarketEvent(payload: {
   id?: string;
-  day: "tuesday" | "saturday";
+  day: string;
   startTime: string;
   endTime: string;
   title: string;

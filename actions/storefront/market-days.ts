@@ -8,7 +8,7 @@ export interface MarketEventState {
   event: {
     id: string;
     title: string;
-    day: "tuesday" | "saturday";
+    day: string;
     startTime: string;
     endTime: string;
     bannerUrl: string | null;
