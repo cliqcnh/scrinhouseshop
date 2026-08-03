@@ -19,6 +19,7 @@ const mockSupabase = {
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(() => Promise.resolve(mockSupabase)),
+  createServiceRoleClient: vi.fn(() => mockSupabase),
 }));
 
 vi.mock("@/lib/supabase/admin-guard", () => ({
@@ -32,6 +33,7 @@ vi.mock("next/cache", () => ({
 describe("Product Enquiries & Messaging Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null } });
   });
 
   describe("submitProductEnquiry (customer)", () => {

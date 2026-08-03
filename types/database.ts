@@ -472,6 +472,8 @@ export interface Database {
           customer_email: string;
           status: string;
           created_at: string;
+          user_id: string | null;
+          session_token: string | null;
         };
         Insert: {
           id?: string;
@@ -481,6 +483,8 @@ export interface Database {
           customer_email: string;
           status?: string;
           created_at?: string;
+          user_id?: string | null;
+          session_token?: string | null;
         };
         Update: {
           id?: string;
@@ -490,6 +494,8 @@ export interface Database {
           customer_email?: string;
           status?: string;
           created_at?: string;
+          user_id?: string | null;
+          session_token?: string | null;
         };
         Relationships: [
           {

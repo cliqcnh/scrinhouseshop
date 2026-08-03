@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HelpCircle, Loader2, CheckCircle2, MessageSquare } from "lucide-react";
+import { HelpCircle, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,10 +13,11 @@ interface EnquiryFormProps {
   productName: string;
 }
 
+import { useEffect } from "react";
+
 export function EnquiryForm({ productId, productName }: EnquiryFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -25,6 +26,15 @@ export function EnquiryForm({ productId, productName }: EnquiryFormProps) {
   const [message, setMessage] = useState(
     `Hi, I'm interested in the "${productName}" and would like to get more details about it. Please get back to me.`
   );
+
+  // Prefill details from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setName(localStorage.getItem("scrinhouse_chat_name") || "");
+      setEmail(localStorage.getItem("scrinhouse_chat_email") || "");
+      setPhone(localStorage.getItem("scrinhouse_chat_phone") || "");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,16 +45,37 @@ export function EnquiryForm({ productId, productName }: EnquiryFormProps) {
 
     setLoading(true);
     try {
-      const res = await submitProductEnquiry(productId, {
-        name,
-        email,
-        phone,
-        message,
-      });
+      // Get or generate guest session token
+      let token = localStorage.getItem("scrinhouse_chat_session_token");
+      if (!token) {
+        token = crypto.randomUUID();
+        localStorage.setItem("scrinhouse_chat_session_token", token);
+      }
+
+      // Save form inputs to localStorage
+      localStorage.setItem("scrinhouse_chat_name", name);
+      localStorage.setItem("scrinhouse_chat_email", email);
+      localStorage.setItem("scrinhouse_chat_phone", phone);
+
+      const res = await submitProductEnquiry(
+        productId,
+        { name, email, phone, message },
+        token
+      );
 
       if (res.success) {
-        setSubmitted(true);
         toast.success("Enquiry sent successfully!");
+        setIsOpen(false);
+        setMessage(`Hi, I'm interested in the "${productName}" and would like to get more details about it. Please get back to me.`);
+        
+        // Dispatch event to open the newly created chat thread in the support widget
+        if (res.enquiryId) {
+          window.dispatchEvent(
+            new CustomEvent("scrinhouse-open-thread", {
+              detail: { enquiryId: res.enquiryId },
+            })
+          );
+        }
       } else {
         toast.error(res.error ?? "Failed to submit enquiry.");
       }
@@ -54,29 +85,6 @@ export function EnquiryForm({ productId, productName }: EnquiryFormProps) {
     } finally {
       setLoading(false);
     }
-  }
-
-  if (submitted) {
-    return (
-      <div className="mt-8 rounded-lg border border-emerald-100 bg-emerald-50/50 p-5 text-center shadow-sm">
-        <CheckCircle2 className="mx-auto size-8 text-emerald-500 mb-2" />
-        <h3 className="text-sm font-semibold text-emerald-900">Enquiry Submitted!</h3>
-        <p className="mt-1 text-xs text-emerald-700 max-w-sm mx-auto leading-relaxed">
-          Thank you. Your message has been sent to our shop representatives. We will reply to your account email/phone shortly.
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-4 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-900 text-emerald-800"
-          onClick={() => {
-            setSubmitted(false);
-            setIsOpen(false);
-          }}
-        >
-          Send Another Enquiry
-        </Button>
-      </div>
-    );
   }
 
   return (

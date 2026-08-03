@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { WhatsAppWidget } from "@/components/shared/whatsapp-widget";
+import { InAppChat } from "@/components/storefront/in-app-chat";
 
 export default function StorefrontLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,7 +8,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
-      <WhatsAppWidget />
+      <InAppChat />
     </div>
   );
 }
