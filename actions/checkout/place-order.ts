@@ -36,6 +36,7 @@ export async function placeOrder(
   cartItems: CartItem[],
   address: DeliveryAddress,
   installmentDetails?: InstallmentDetails,
+  walletAmountToApply?: number,
 ): Promise<PlaceOrderResult> {
   const supabase = await createClient();
 
@@ -92,6 +93,19 @@ export async function placeOrder(
   const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
+  let appliedWalletAmount = 0;
+  if (walletAmountToApply && walletAmountToApply > 0) {
+    const { data: wallet } = await (supabase.from("wallets") as any)
+      .select("balance")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const actualBalance = wallet ? Number((wallet as any).balance) : 0;
+    appliedWalletAmount = Math.min(actualBalance, total, walletAmountToApply);
+  }
+
+  const remainingTotal = total - appliedWalletAmount;
+
   const installmentDeposit = cartItems.reduce((sum, i) => sum + (i.isInstallment && i.depositAmount !== undefined ? i.depositAmount * i.quantity : 0), 0);
   const installmentBalance = cartItems.reduce((sum, i) => sum + (i.isInstallment && i.remainingBalance !== undefined ? i.remainingBalance * i.quantity : 0), 0);
 
@@ -101,12 +115,13 @@ export async function placeOrder(
   const { data: order, error: orderErr } = await (supabase.from("orders") as any)
     .insert({
       user_id: user.id,
-      status: "pending_payment",
+      status: remainingTotal === 0 ? "paid" : "pending_payment",
       delivery_address: address as unknown as Record<string, unknown>,
       subtotal,
       delivery_fee: deliveryFee,
       total,
-      paystack_ref: paystackRef,
+      paystack_ref: remainingTotal === 0 ? null : paystackRef,
+      wallet_amount_applied: appliedWalletAmount,
       is_installment: hasInstallment,
       installment_deposit: installmentDeposit,
       installment_balance: installmentBalance,
@@ -116,6 +131,33 @@ export async function placeOrder(
 
   if (orderErr || !order) {
     throw new Error(`Failed to create order: ${orderErr?.message}`);
+  }
+
+  // Deduct from wallet and log transaction if wallet was applied
+  if (appliedWalletAmount > 0) {
+    const { data: w } = await (supabase.from("wallets") as any)
+      .select("balance")
+      .eq("id", user.id)
+      .single();
+
+    const currentBal = w ? Number((w as any).balance) : 0;
+    const finalBal = currentBal - appliedWalletAmount;
+
+    const { error: deductErr } = await (supabase.from("wallets") as any)
+      .update({ balance: finalBal, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+
+    if (deductErr) {
+      throw new Error(`Failed to deduct wallet: ${deductErr.message}`);
+    }
+
+    await (supabase.from("wallet_transactions") as any).insert({
+      user_id: user.id,
+      type: "purchase_payment",
+      amount: -appliedWalletAmount,
+      description: `Payment for Order #${order.id.slice(0, 8).toUpperCase()}`,
+      reference_id: order.id,
+    });
   }
 
   // Save Installment Applications if applicable
@@ -167,7 +209,7 @@ export async function placeOrder(
   const env = getServerEnv();
   let authorizationUrl: string | null = null;
 
-  if (env.PAYSTACK_SECRET_KEY) {
+  if (remainingTotal > 0 && env.PAYSTACK_SECRET_KEY) {
     const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
@@ -176,7 +218,7 @@ export async function placeOrder(
       },
       body: JSON.stringify({
         email: user.email,
-        amount: Math.round(total * 100), // pesewas
+        amount: Math.round(remainingTotal * 100), // remaining due in pesewas
         currency: "GHS",
         reference: paystackRef,
         metadata: {
@@ -220,5 +262,5 @@ export async function placeOrder(
     );
   }
 
-  return { orderId: order.id, paystackRef, authorizationUrl };
+  return { orderId: order.id, paystackRef: remainingTotal === 0 ? "WALLET" : paystackRef, authorizationUrl };
 }

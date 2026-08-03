@@ -19,6 +19,7 @@ import {
   Ticket,
   MessageSquare,
   Flame,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ const NAV_SECTIONS = [
       { href: "/admin/trade-ins", label: "Trade-Ins", icon: RefreshCw },
       { href: "/admin/coupons", label: "Coupons", icon: Ticket },
       { href: "/admin/customers", label: "Customers", icon: Users },
+      { href: "/admin/wallet", label: "Wallet & Payouts", icon: Wallet },
       { href: "/admin/repairs", label: "Repairs", icon: Wrench },
     ],
   },

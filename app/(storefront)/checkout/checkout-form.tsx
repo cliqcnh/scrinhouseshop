@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { useCartStore } from "@/stores/cart";
 import { formatPrice } from "@/utils/format";
 import { placeOrder, type DeliveryAddress } from "@/actions/checkout/place-order";
 import type { AddressValues } from "@/actions/storefront/addresses";
+import { getWalletDetails } from "@/actions/storefront/wallet";
 
 const GHANA_REGIONS = [
   "Greater Accra", "Ashanti", "Western", "Central", "Eastern",
@@ -36,6 +37,18 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
 
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+
+  // Wallet States
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
+
+  useEffect(() => {
+    getWalletDetails().then((res) => {
+      setWalletBalance(res.balance);
+    }).catch((err) => {
+      console.error("Failed to fetch wallet details:", err);
+    });
+  }, []);
 
   // Promo Coupon State
   const [couponInput, setCouponInput] = useState("");
@@ -146,7 +159,10 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
         ? { ghanaCardNumber, ghanaCardFrontUrl, ghanaCardBackUrl }
         : undefined;
 
-      const result = await placeOrder(items, address, installmentDetails);
+      const cartTotal = Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0));
+      const walletDeduction = useWallet ? Math.min(walletBalance, cartTotal) : 0;
+
+      const result = await placeOrder(items, address, installmentDetails, walletDeduction);
 
       // If Paystack returned a hosted URL → redirect there
       if (result.authorizationUrl) {
@@ -155,9 +171,13 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
         return;
       }
 
-      // No Paystack key configured (dev / test mode) → go to confirmation directly
+      // No Paystack redirect needed (fully paid by wallet, or dev test mock)
       clearCart();
-      router.push(`/order/${result.orderId}?ref=${result.paystackRef}&mock=1`);
+      if (result.paystackRef === "WALLET") {
+        router.push(`/order/${result.orderId}?ref=WALLET&paid=1`);
+      } else {
+        router.push(`/order/${result.orderId}?ref=${result.paystackRef}&mock=1`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -426,15 +446,40 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                 <span>-{formatPrice(appliedCoupon.discountAmount)}</span>
               </div>
             )}
+            {useWallet && walletBalance > 0 && (
+              <div className="flex justify-between text-green-700 font-semibold">
+                <span>Wallet Applied</span>
+                <span>-{formatPrice(Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0))))}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Delivery</span>
               <span className="text-muted-foreground">To be confirmed</span>
             </div>
           </div>
 
+          {walletBalance > 0 && (
+            <div className="border-t border-border pt-4 space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useWallet}
+                  onChange={(e) => setUseWallet(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-ring"
+                />
+                <span>Use Wallet Balance (Available: {formatPrice(walletBalance)})</span>
+              </label>
+              {useWallet && (
+                <p className="text-[11px] text-muted-foreground pl-5">
+                  GH₵ {Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0))).toFixed(2)} will be deducted from your wallet balance.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="border-t border-border pt-4 flex justify-between text-sm font-semibold text-foreground">
-            <span>Total</span>
-            <span>{formatPrice(Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0)))}</span>
+            <span>{useWallet ? "Amount Due" : "Total"}</span>
+            <span>{formatPrice(Math.max(0, (subtotal() - (appliedCoupon?.discountAmount ?? 0)) - (useWallet ? Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0))) : 0)))}</span>
           </div>
 
           <Button
@@ -443,7 +488,11 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
             className="w-full rounded-none"
             disabled={loading}
           >
-            {loading ? "Processing…" : "Pay with Paystack"}
+            {loading 
+              ? "Processing…" 
+              : (useWallet && walletBalance >= Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0)))
+                ? "Pay with Wallet" 
+                : "Pay with Paystack"}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
