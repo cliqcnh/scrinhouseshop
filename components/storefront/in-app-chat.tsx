@@ -10,6 +10,7 @@ import {
   getCustomerEnquiryMessages, 
   sendCustomerMessage 
 } from "@/actions/storefront/enquiry";
+import { createClient } from "@/lib/supabase/client";
 
 interface EnquiryThread {
   id: string;
@@ -127,21 +128,89 @@ export function InAppChat() {
     }
   }, [isOpen, sessionToken]);
 
-  // Polling for replies on active chat
+  // Subscribe to real-time chat messages and status updates
   useEffect(() => {
-    if (!isOpen || !sessionToken || !activeThreadId) return;
+    if (!isOpen || !activeThreadId) return;
 
-    const interval = setInterval(async () => {
-      try {
-        const msgs = await getCustomerEnquiryMessages(activeThreadId, sessionToken);
-        setMessages(msgs);
-      } catch (err) {
-        console.error("Failed to poll messages:", err);
-      }
-    }, 6000);
+    const supabaseClient = createClient();
+    const channel = supabaseClient
+      .channel(`enquiry_messages_${activeThreadId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "product_enquiry_messages",
+          filter: `enquiry_id=eq.${activeThreadId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as {
+            id: string;
+            enquiry_id: string;
+            sender: "customer" | "admin";
+            message: string;
+            created_at: string;
+          };
+          if (!newMsg) return;
 
-    return () => clearInterval(interval);
-  }, [isOpen, sessionToken, activeThreadId]);
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: newMsg.id,
+                enquiryId: newMsg.enquiry_id,
+                sender: newMsg.sender,
+                message: newMsg.message,
+                createdAt: newMsg.created_at,
+              },
+            ];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabaseClient.removeChannel(channel);
+    };
+  }, [isOpen, activeThreadId]);
+
+  // Subscribe to real-time updates on active thread attributes (such as replies status)
+  useEffect(() => {
+    if (!isOpen || !sessionToken) return;
+
+    const supabaseClient = createClient();
+    const channel = supabaseClient
+      .channel(`enquiry_status_${sessionToken}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "product_enquiries",
+        },
+        (payload) => {
+          const updated = payload.new as {
+            id: string;
+            status: EnquiryThread["status"];
+          };
+          if (!updated) return;
+
+          setThreads((prev) =>
+            prev.map((t) =>
+              t.id === updated.id
+                ? { ...t, status: updated.status }
+                : t
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabaseClient.removeChannel(channel);
+    };
+  }, [isOpen, sessionToken]);
 
   // Scroll to bottom on new messages
   useEffect(() => {

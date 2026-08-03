@@ -19,11 +19,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/utils/format";
 import {
+  listEnquiries,
   getEnquiryMessages,
   replyToEnquiry,
   type EnquiryRow,
   type EnquiryMessage,
 } from "@/actions/admin/enquiries";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 interface EnquiriesClientProps {
@@ -74,6 +76,82 @@ export function EnquiriesClient({ initialEnquiries }: EnquiriesClientProps) {
         setLoadingMessages(false);
       });
   }, [selectedId]);
+
+  // Subscribe to real-time chat messages for selected thread
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`admin_enquiry_messages_${selectedId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "product_enquiry_messages",
+          filter: `enquiry_id=eq.${selectedId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as {
+            id: string;
+            enquiry_id: string;
+            sender: string;
+            message: string;
+            created_at: string;
+          };
+          if (!newMsg) return;
+
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: newMsg.id,
+                enquiryId: newMsg.enquiry_id,
+                sender: newMsg.sender as "customer" | "admin",
+                message: newMsg.message,
+                createdAt: newMsg.created_at,
+              },
+            ];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedId]);
+
+  // Subscribe to real-time updates on product_enquiries table to auto-refresh threads list
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("admin_enquiries_list")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "product_enquiries",
+        },
+        async () => {
+          // Re-fetch threads list to keep UI in sync
+          try {
+            const list = await listEnquiries();
+            setEnquiries(list);
+          } catch (err) {
+            console.error("Failed to sync enquiries list:", err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Scroll to bottom of chat
   useEffect(() => {
