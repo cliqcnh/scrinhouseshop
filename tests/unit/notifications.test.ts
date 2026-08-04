@@ -59,22 +59,30 @@ describe("sendSMS API call", () => {
     const success = await sendSMS("0241234567", "Wigal Test Message");
     expect(success).toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://sms.wigal.com.gh/api/v2/send_sms",
+      "https://frogapi.wigal.com.gh/api/v3/sms/send",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          "Authorization": "Bearer wigal-test-key",
+          "API-KEY": "wigal-test-key",
+          "USERNAME": "",
           "Content-Type": "application/json",
-        }),
-        body: JSON.stringify({
-          key: "wigal-test-key",
-          sender: "ScrinHouseGH",
-          destinations: ["233241234567"],
-          to: "233241234567",
-          message: "Wigal Test Message",
         }),
       })
     );
+
+    const lastCall = mockFetch.mock.calls[0];
+    const bodyObj = JSON.parse(lastCall![1]!.body as string);
+    expect(bodyObj).toEqual({
+      senderid: "ScrinHouseGH",
+      message: "Wigal Test Message",
+      smstype: "text",
+      destinations: [
+        {
+          destination: "233241234567",
+          msgid: expect.any(String),
+        }
+      ]
+    });
   });
 
   it("calls Arkesel SMS API if SMS_API_KEY is defined", async () => {

@@ -42,32 +42,61 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
   try {
     // 1. Wigal Frog Gateway Integration (Ghana)
     if (wigalApiKey || (wigalUsername && wigalPassword)) {
-      const endpoint = process.env.WIGAL_SMS_URL || "https://sms.wigal.com.gh/api/v2/send_sms";
-      const payload = wigalApiKey
-        ? {
-            key: wigalApiKey,
-            sender: senderId,
-            destinations: [normalizedTo],
-            to: normalizedTo,
-            message,
-          }
-        : {
-            username: wigalUsername,
-            password: wigalPassword,
-            sender: senderId,
-            destinations: [normalizedTo],
-            to: normalizedTo,
-            message,
-          };
+      const endpoint = process.env.WIGAL_SMS_URL || "https://frogapi.wigal.com.gh/api/v3/sms/send";
+      const isV3 = endpoint.includes("frogapi.wigal.com.gh") || endpoint.includes("v3");
 
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(wigalApiKey ? { "Authorization": `Bearer ${wigalApiKey}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
+      let res;
+      if (isV3) {
+        // Wigal FROG API v3
+        const payload = {
+          senderid: senderId,
+          message,
+          smstype: "text",
+          destinations: [
+            {
+              destination: normalizedTo,
+              msgid: `${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            }
+          ],
+        };
+
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "API-KEY": wigalApiKey || "",
+            "USERNAME": wigalUsername || "",
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Legacy fallback
+        const payload = wigalApiKey
+          ? {
+              key: wigalApiKey,
+              sender: senderId,
+              destinations: [normalizedTo],
+              to: normalizedTo,
+              message,
+            }
+          : {
+              username: wigalUsername,
+              password: wigalPassword,
+              sender: senderId,
+              destinations: [normalizedTo],
+              to: normalizedTo,
+              message,
+            };
+
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(wigalApiKey ? { "Authorization": `Bearer ${wigalApiKey}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (!res.ok) {
         const errText = await res.text();
