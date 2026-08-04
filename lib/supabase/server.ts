@@ -36,6 +36,25 @@ export async function createClient() {
 }
 
 /**
+ * Public, cookie-free client for caching and static operations.
+ * Respects RLS (uses the public anon key) but bypasses cookie jar reads
+ * to avoid Next.js static bailing or background thread cookies() failures.
+ */
+export function createPublicClient() {
+  const env = getServerEnv();
+  return createServerClient<Database>(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    },
+  );
+}
+
+/**
  * Service-role client for privileged server-only operations (e.g. admin
  * actions, webhooks). Never import this into anything that runs in the
  * browser — it bypasses Row Level Security entirely.

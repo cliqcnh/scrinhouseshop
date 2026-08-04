@@ -1,7 +1,7 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPublicClient } from "@/lib/supabase/server";
 import type { ProductFiltersParsed } from "@/lib/validations/catalog";
 import type {
   Category,
@@ -133,7 +133,7 @@ async function getCategoryAndChildrenIds(supabase: any, categoryId: string): Pro
 export async function listProducts(
   filters: ProductFiltersParsed,
 ): Promise<PaginatedResult<ProductSummary>> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   let query = supabase
     .from("products")
@@ -204,7 +204,7 @@ export async function listProducts(
 export async function getProductBySlug(slug: string): Promise<ProductDetail | null> {
   const cachedFn = unstable_cache(
     async (s: string) => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data, error } = await supabase
         .from("products")
         .select(PRODUCT_SELECT)
@@ -226,7 +226,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
 export async function getFeaturedProducts(limit = 8, categoryId?: string): Promise<ProductSummary[]> {
   const cachedFn = unstable_cache(
     async (l: number, catId?: string) => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       let query = supabase
         .from("products")
         .select(PRODUCT_SELECT)
@@ -277,7 +277,7 @@ export async function getFeaturedProducts(limit = 8, categoryId?: string): Promi
 export async function getRelatedProducts(product: ProductDetail, limit = 4): Promise<ProductSummary[]> {
   const cachedFn = unstable_cache(
     async (productId: string, categoryId: string, l: number) => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data, error } = await supabase
         .from("products")
         .select(PRODUCT_SELECT)
@@ -299,7 +299,7 @@ export async function getRelatedProducts(product: ProductDetail, limit = 4): Pro
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
   const cachedFn = unstable_cache(
     async (s: string) => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data, error } = await supabase
         .from("categories")
         .select("id, parent_id, name, slug, description, image_url")
@@ -329,7 +329,7 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
 export async function listBrands(): Promise<{ id: string; name: string; slug: string; logoUrl: string | null }[]> {
   const cachedFn = unstable_cache(
     async () => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data, error } = await supabase
         .from("brands")
         .select("id, name, slug, logo_url")
@@ -349,7 +349,7 @@ export async function listBrands(): Promise<{ id: string; name: string; slug: st
 export async function listTopLevelCategories(): Promise<Category[]> {
   const cachedFn = unstable_cache(
     async () => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data, error } = await supabase
         .from("categories")
         .select("id, parent_id, name, slug, description, image_url")
@@ -378,7 +378,7 @@ export async function listTopLevelCategories(): Promise<Category[]> {
 export async function getCategoryTree(): Promise<(Category & { children: Category[] })[]> {
   const cachedFn = unstable_cache(
     async () => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data, error } = await supabase
         .from("categories")
         .select("id, parent_id, name, slug, description, image_url")
@@ -423,7 +423,7 @@ export async function getCategoryTree(): Promise<(Category & { children: Categor
 export async function listHomeSlides(): Promise<HomeSlide[]> {
   const cachedFn = unstable_cache(
     async () => {
-      const supabase = await createClient();
+      const supabase = createPublicClient();
       const { data, error } = await supabase
         .from("home_slides")
         .select("id, image_url, title, subtitle, link_url, button_text, display_order, is_active")
