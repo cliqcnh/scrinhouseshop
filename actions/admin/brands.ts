@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffUser } from "@/lib/supabase/admin-guard";
 import { brandFormSchema, type BrandFormValues } from "@/lib/validations/admin-taxonomy";
@@ -23,6 +23,7 @@ export async function saveBrand(values: BrandFormValues): Promise<ActionResult> 
 
   if (error) return { success: false, error: error.message };
   revalidatePath("/admin/brands");
+  revalidateTag("brands");
   return { success: true };
 }
 
@@ -32,5 +33,6 @@ export async function deleteBrand(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("brands").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   revalidatePath("/admin/brands");
+  revalidateTag("brands");
   return { success: true };
 }

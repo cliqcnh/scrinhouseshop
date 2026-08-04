@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { nanoid } from "nanoid";
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffUser } from "@/lib/supabase/admin-guard";
@@ -98,6 +98,7 @@ export async function deleteProduct(productId: string): Promise<ActionResult> {
   if (error) return { success: false, error: error.message };
 
   revalidatePath("/admin/products");
+  revalidateTag("products");
   return { success: true };
 }
 
@@ -134,6 +135,7 @@ export async function uploadProductImage(productId: string, formData: FormData):
   if (insertError) return { success: false, error: insertError.message };
 
   revalidatePath(`/admin/products/${productId}`);
+  revalidateTag("products");
   return { success: true };
 }
 
@@ -145,6 +147,7 @@ export async function deleteProductImage(imageId: string, productId: string): Pr
   if (error) return { success: false, error: error.message };
 
   revalidatePath(`/admin/products/${productId}`);
+  revalidateTag("products");
   return { success: true };
 }
 
@@ -180,5 +183,6 @@ export async function bulkUpdateProducts(
   if (error) return { success: false, error: error.message };
 
   revalidatePath("/admin/products");
+  revalidateTag("products");
   return { success: true };
 }

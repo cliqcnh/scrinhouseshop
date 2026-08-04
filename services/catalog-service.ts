@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ProductFiltersParsed } from "@/lib/validations/catalog";
 import type {
@@ -201,197 +202,251 @@ export async function listProducts(
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductDetail | null> {
-  const supabase = await createClient();
+  const cachedFn = unstable_cache(
+    async (s: string) => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .eq("slug", s)
+        .eq("is_active", true)
+        .maybeSingle();
 
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
+      if (error) throw new Error(`Failed to load product "${s}": ${error.message}`);
+      if (!data) return null;
+      return toDetail(data as unknown as ProductRow);
+    },
+    ["product-detail"],
+    { revalidate: 1800, tags: ["products"] }
+  );
 
-  if (error) throw new Error(`Failed to load product "${slug}": ${error.message}`);
-  if (!data) return null;
-
-  return toDetail(data as unknown as ProductRow);
+  return cachedFn(slug);
 }
 
 export async function getFeaturedProducts(limit = 8, categoryId?: string): Promise<ProductSummary[]> {
-  const supabase = await createClient();
+  const cachedFn = unstable_cache(
+    async (l: number, catId?: string) => {
+      const supabase = await createClient();
+      let query = supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .eq("is_active", true)
+        .eq("is_featured", true);
 
-  let query = supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("is_active", true)
-    .eq("is_featured", true);
+      if (catId) {
+        const categoryIds = await getCategoryAndChildrenIds(supabase, catId);
+        query = query.in("category_id", categoryIds);
+      }
 
-  if (categoryId) {
-    const categoryIds = await getCategoryAndChildrenIds(supabase, categoryId);
-    query = query.in("category_id", categoryIds);
-  }
+      const { data, error } = await query
+        .order("created_at", { ascending: false })
+        .limit(l);
 
-  const { data, error } = await query
-    .order("created_at", { ascending: false })
-    .limit(limit);
+      if (error) throw new Error(`Failed to load featured products: ${error.message}`);
+      
+      const items = data ?? [];
+      if (items.length > 0) {
+        return items.map((row) => toSummary(row as unknown as ProductRow));
+      }
 
-  if (error) throw new Error(`Failed to load featured products: ${error.message}`);
-  
-  const items = data ?? [];
-  if (items.length > 0) {
-    return items.map((row) => toSummary(row as unknown as ProductRow));
-  }
+      // Fallback: if no products are marked as 'is_featured = true', return the latest active products in this category
+      let fallbackQuery = supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .eq("is_active", true);
 
-  // Fallback: if no products are marked as 'is_featured = true', return the latest active products in this category
-  let fallbackQuery = supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("is_active", true);
+      if (catId) {
+        const categoryIds = await getCategoryAndChildrenIds(supabase, catId);
+        fallbackQuery = fallbackQuery.in("category_id", categoryIds);
+      }
 
-  if (categoryId) {
-    const categoryIds = await getCategoryAndChildrenIds(supabase, categoryId);
-    fallbackQuery = fallbackQuery.in("category_id", categoryIds);
-  }
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery
+        .order("created_at", { ascending: false })
+        .limit(l);
 
-  const { data: fallbackData, error: fallbackError } = await fallbackQuery
-    .order("created_at", { ascending: false })
-    .limit(limit);
+      if (fallbackError) throw new Error(`Failed to load fallback products: ${fallbackError.message}`);
+      return (fallbackData ?? []).map((row) => toSummary(row as unknown as ProductRow));
+    },
+    ["featured-products"],
+    { revalidate: 1800, tags: ["products"] }
+  );
 
-  if (fallbackError) throw new Error(`Failed to load fallback products: ${fallbackError.message}`);
-  return (fallbackData ?? []).map((row) => toSummary(row as unknown as ProductRow));
+  return cachedFn(limit, categoryId);
 }
 
 export async function getRelatedProducts(product: ProductDetail, limit = 4): Promise<ProductSummary[]> {
-  const supabase = await createClient();
+  const cachedFn = unstable_cache(
+    async (productId: string, categoryId: string, l: number) => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .eq("is_active", true)
+        .eq("category_id", categoryId)
+        .neq("id", productId)
+        .limit(l);
 
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("is_active", true)
-    .eq("category_id", product.category.id)
-    .neq("id", product.id)
-    .limit(limit);
+      if (error) throw new Error(`Failed to load related products: ${error.message}`);
+      return (data ?? []).map((row) => toSummary(row as unknown as ProductRow));
+    },
+    ["related-products"],
+    { revalidate: 1800, tags: ["products"] }
+  );
 
-  if (error) throw new Error(`Failed to load related products: ${error.message}`);
-  return (data ?? []).map((row) => toSummary(row as unknown as ProductRow));
+  return cachedFn(product.id, product.category.id, limit);
 }
 
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
-  const supabase = await createClient();
+  const cachedFn = unstable_cache(
+    async (s: string) => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, parent_id, name, slug, description, image_url")
+        .eq("slug", s)
+        .eq("is_active", true)
+        .maybeSingle();
 
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, parent_id, name, slug, description, image_url")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
+      if (error) throw new Error(`Failed to load category "${s}": ${error.message}`);
+      if (!data) return null;
 
-  if (error) throw new Error(`Failed to load category "${slug}": ${error.message}`);
-  if (!data) return null;
+      return {
+        id: data.id,
+        parentId: data.parent_id,
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        imageUrl: data.image_url,
+      };
+    },
+    ["category-detail"],
+    { revalidate: 3600, tags: ["categories"] }
+  );
 
-  return {
-    id: data.id,
-    parentId: data.parent_id,
-    name: data.name,
-    slug: data.slug,
-    description: data.description,
-    imageUrl: data.image_url,
-  };
+  return cachedFn(slug);
 }
 
 export async function listBrands(): Promise<{ id: string; name: string; slug: string; logoUrl: string | null }[]> {
-  const supabase = await createClient();
+  const cachedFn = unstable_cache(
+    async () => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("brands")
+        .select("id, name, slug, logo_url")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
 
-  const { data, error } = await supabase
-    .from("brands")
-    .select("id, name, slug, logo_url")
-    .eq("is_active", true)
-    .order("name", { ascending: true });
+      if (error) throw new Error(`Failed to list brands: ${error.message}`);
+      return (data ?? []).map((b) => ({ id: b.id, name: b.name, slug: b.slug, logoUrl: b.logo_url }));
+    },
+    ["brands-list"],
+    { revalidate: 3600, tags: ["brands"] }
+  );
 
-  if (error) throw new Error(`Failed to list brands: ${error.message}`);
-
-  return (data ?? []).map((b) => ({ id: b.id, name: b.name, slug: b.slug, logoUrl: b.logo_url }));
+  return cachedFn();
 }
 
 export async function listTopLevelCategories(): Promise<Category[]> {
-  const supabase = await createClient();
+  const cachedFn = unstable_cache(
+    async () => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, parent_id, name, slug, description, image_url")
+        .is("parent_id", null)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
 
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, parent_id, name, slug, description, image_url")
-    .is("parent_id", null)
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
+      if (error) throw new Error(`Failed to list categories: ${error.message}`);
 
-  if (error) throw new Error(`Failed to list categories: ${error.message}`);
-
-  return (data ?? []).map((c) => ({
-    id: c.id,
-    parentId: c.parent_id,
-    name: c.name,
-    slug: c.slug,
-    description: c.description,
-    imageUrl: c.image_url,
-  }));
-}
-
-export async function getCategoryTree(): Promise<(Category & { children: Category[] })[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, parent_id, name, slug, description, image_url")
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
-
-  if (error) throw new Error(`Failed to load category tree: ${error.message}`);
-
-  const rows = data ?? [];
-  const byId = new Map(
-    rows.map((c) => [
-      c.id,
-      {
+      return (data ?? []).map((c) => ({
         id: c.id,
         parentId: c.parent_id,
         name: c.name,
         slug: c.slug,
         description: c.description,
         imageUrl: c.image_url,
-        children: [] as Category[],
-      },
-    ]),
+      }));
+    },
+    ["top-level-categories"],
+    { revalidate: 3600, tags: ["categories"] }
   );
 
-  const roots: (Category & { children: Category[] })[] = [];
-  for (const category of byId.values()) {
-    if (category.parentId) {
-      byId.get(category.parentId)?.children.push(category);
-    } else {
-      roots.push(category);
-    }
-  }
-  return roots;
+  return cachedFn();
+}
+
+export async function getCategoryTree(): Promise<(Category & { children: Category[] })[]> {
+  const cachedFn = unstable_cache(
+    async () => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, parent_id, name, slug, description, image_url")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw new Error(`Failed to load category tree: ${error.message}`);
+
+      const rows = data ?? [];
+      const byId = new Map(
+        rows.map((c) => [
+          c.id,
+          {
+            id: c.id,
+            parentId: c.parent_id,
+            name: c.name,
+            slug: c.slug,
+            description: c.description,
+            imageUrl: c.image_url,
+            children: [] as Category[],
+          },
+        ]),
+      );
+
+      const roots: (Category & { children: Category[] })[] = [];
+      for (const category of byId.values()) {
+        if (category.parentId) {
+          byId.get(category.parentId)?.children.push(category);
+        } else {
+          roots.push(category);
+        }
+      }
+      return roots;
+    },
+    ["category-tree"],
+    { revalidate: 3600, tags: ["categories"] }
+  );
+
+  return cachedFn();
 }
 
 export async function listHomeSlides(): Promise<HomeSlide[]> {
-  const supabase = await createClient();
+  const cachedFn = unstable_cache(
+    async () => {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("home_slides")
+        .select("id, image_url, title, subtitle, link_url, button_text, display_order, is_active")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
 
-  const { data, error } = await supabase
-    .from("home_slides")
-    .select("id, image_url, title, subtitle, link_url, button_text, display_order, is_active")
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
+      if (error) throw new Error(`Failed to list home slides: ${error.message}`);
 
-  if (error) throw new Error(`Failed to list home slides: ${error.message}`);
+      return (data ?? []).map((s) => ({
+        id: s.id,
+        imageUrl: s.image_url,
+        title: s.title,
+        subtitle: s.subtitle,
+        linkUrl: s.link_url,
+        buttonText: s.button_text,
+        displayOrder: s.display_order,
+        isActive: s.is_active,
+      }));
+    },
+    ["home-slides"],
+    { revalidate: 3600, tags: ["slides"] }
+  );
 
-  return (data ?? []).map((s) => ({
-    id: s.id,
-    imageUrl: s.image_url,
-    title: s.title,
-    subtitle: s.subtitle,
-    linkUrl: s.link_url,
-    buttonText: s.button_text,
-    displayOrder: s.display_order,
-    isActive: s.is_active,
-  }));
+  return cachedFn();
 }
 
