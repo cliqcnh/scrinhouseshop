@@ -120,7 +120,7 @@ describe("Market Days Storefront & Bidding Logic", () => {
 
     const res = await placeAuctionBid("auction-123", 500);
     expect(res.success).toBe(true);
-    expect(smsSpy).toHaveBeenCalled();
+    expect(smsSpy).not.toHaveBeenCalled();
   });
 });
 

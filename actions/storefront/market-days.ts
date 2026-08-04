@@ -326,11 +326,6 @@ export async function placeAuctionBid(
         title: "You've been outbid!",
         message: notifyMessage,
       });
-
-      // 2. SMS notification (Ghana phone gateways)
-      if (prevUserCast.phone) {
-        await sendSMS(prevUserCast.phone, notifyMessage);
-      }
     }
   }
 

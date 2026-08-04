@@ -80,9 +80,6 @@ export async function GET(req: NextRequest) {
                 title: reminderTag,
                 message: msg,
               });
-
-              // SMS
-              if (u.phone) await sendSMS(u.phone, msg);
             }
           }
         }
@@ -145,9 +142,6 @@ export async function GET(req: NextRequest) {
                 title: tag,
                 message: msg,
               });
-
-              // SMS
-              if (u?.phone) await sendSMS(u.phone, msg);
             }
           }
         }
