@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { processEndedAuctionsInternal } from "@/actions/storefront/market-days";
-import { sendSMS } from "@/lib/notifications";
-
 export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
@@ -134,7 +132,6 @@ export async function GET(req: NextRequest) {
 
             if (count === 0) {
               const msg = `Hurry! The live auction for "${prodName}" is ending in 10 minutes! Place your final bids now.`;
-              const u = bidder.profiles;
 
               // In-app
               await supabase.from("market_notifications").insert({

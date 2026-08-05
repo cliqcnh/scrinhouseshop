@@ -1,14 +1,7 @@
-import { BarChart3 } from "lucide-react";
-import { AdminComingSoon } from "@/components/admin/admin-coming-soon";
+import AnalyticsClient from "@/components/admin/analytics-client";
 
-export const metadata = { title: "Analytics" };
+export const metadata = { title: "Earnings & Analytics Audit" };
 
 export default function AdminAnalyticsPage() {
-  return (
-    <AdminComingSoon
-      icon={BarChart3}
-      title="Analytics"
-      description="Sales, repair revenue, and inventory-value reporting need real orders first — coming in a later phase."
-    />
-  );
+  return <AnalyticsClient />;
 }

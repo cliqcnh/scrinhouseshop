@@ -263,6 +263,7 @@ export interface Database {
           paystack_ref: string | null;
           paystack_channel: string | null;
           notes: string | null;
+          wallet_amount_applied: number;
           created_at: string;
           updated_at: string;
         };
@@ -277,6 +278,7 @@ export interface Database {
           paystack_ref?: string | null;
           paystack_channel?: string | null;
           notes?: string | null;
+          wallet_amount_applied?: number;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Row"]>;
         Relationships: [];
