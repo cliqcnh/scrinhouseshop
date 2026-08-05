@@ -82,7 +82,6 @@ export async function placeOrder(
       );
     }
 
-    const categorySlug = (variant as any).products?.categories?.slug;
     const parentProduct = (variant as any).products;
     const isAllowedForProduct = parentProduct?.allow_installments !== false;
     const realPrice = Number(variant.price);
@@ -90,9 +89,6 @@ export async function placeOrder(
     if (item.isInstallment) {
       if (!isAllowedForProduct) {
         throw new Error(`Installment payment plan is not enabled for "${item.name}".`);
-      }
-      if (categorySlug !== "phones") {
-        throw new Error(`Installment payment plan is only available for phones.`);
       }
 
       // Read custom values if defined, fallback to global values

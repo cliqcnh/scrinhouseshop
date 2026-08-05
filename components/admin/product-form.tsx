@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -80,6 +80,14 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "variants" });
+
+  const productType = watch("productType");
+
+  useEffect(() => {
+    if (!initialValues) {
+      setValue("allowInstallments", productType === "phone");
+    }
+  }, [productType, initialValues, setValue]);
 
   async function onSubmit(values: ProductFormValues) {
     setSubmitError(null);
