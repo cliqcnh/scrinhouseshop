@@ -154,6 +154,8 @@ export interface ProductInstallmentConfigRow {
   allowInstallments: boolean;
   installmentProfitPercentage: number | null;
   installmentDepositPercentage: number | null;
+  categoryName: string | null;
+  categorySlug: string | null;
 }
 
 export async function listProductsForInstallments(searchQuery?: string): Promise<ProductInstallmentConfigRow[]> {
@@ -162,7 +164,7 @@ export async function listProductsForInstallments(searchQuery?: string): Promise
 
   let query = supabase
     .from("products")
-    .select("id, name, sku, product_type, allow_installments, installment_profit_percentage, installment_deposit_percentage")
+    .select("id, name, sku, product_type, allow_installments, installment_profit_percentage, installment_deposit_percentage, categories:categories!products_category_id_fkey(name, slug)")
     .order("name", { ascending: true });
 
   if (searchQuery && searchQuery.trim() !== "") {
@@ -183,6 +185,8 @@ export async function listProductsForInstallments(searchQuery?: string): Promise
     allowInstallments: row.allow_installments,
     installmentProfitPercentage: row.installment_profit_percentage,
     installmentDepositPercentage: row.installment_deposit_percentage,
+    categoryName: row.categories?.name ?? null,
+    categorySlug: row.categories?.slug ?? null,
   }));
 }
 

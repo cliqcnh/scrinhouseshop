@@ -12,16 +12,73 @@ import {
 
 const PRODUCT_TYPES = [
   { id: "phone", label: "Phones" },
+  { id: "laptop_tablet", label: "Laptops & Tablets" },
+  { id: "gaming", label: "Gaming Consoles" },
   { id: "accessory", label: "Accessories" },
   { id: "repair_part", label: "Repair Parts" },
 ];
+
+function getProductGroup(p: ProductInstallmentConfigRow): "phone" | "laptop_tablet" | "gaming" | "accessory" | "repair_part" {
+  const slug = p.categorySlug || "";
+  const name = p.name.toLowerCase();
+
+  // 1. Repair Parts
+  if (
+    p.productType === "repair_part" ||
+    slug.includes("batteries") ||
+    slug.includes("repairs") ||
+    name.includes("replacement") ||
+    name.includes("screen") ||
+    name.includes("battery")
+  ) {
+    return "repair_part";
+  }
+
+  // 2. Laptops & Tablets
+  if (
+    slug === "laptops" ||
+    slug === "tablets-ipads" ||
+    name.includes("macbook") ||
+    name.includes("ipad") ||
+    name.includes("laptop") ||
+    name.includes("tablet")
+  ) {
+    return "laptop_tablet";
+  }
+
+  // 3. Gaming Consoles
+  if (
+    slug === "gaming-consoles" ||
+    name.includes("playstation") ||
+    name.includes("xbox") ||
+    name.includes("nintendo") ||
+    name.includes("console")
+  ) {
+    return "gaming";
+  }
+
+  // 4. Accessories
+  if (
+    p.productType === "accessory" ||
+    slug === "accessories" ||
+    slug === "cases-protection" ||
+    slug === "power-banks" ||
+    slug === "chargers" ||
+    slug === "audio"
+  ) {
+    return "accessory";
+  }
+
+  // 5. Phones (Default)
+  return "phone";
+}
 
 export function InstallmentProductsCard() {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<ProductInstallmentConfigRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"phone" | "accessory" | "repair_part">("phone");
+  const [activeTab, setActiveTab] = useState<"phone" | "laptop_tablet" | "gaming" | "accessory" | "repair_part">("phone");
 
   // Local form states per product row
   const [rowStates, setRowStates] = useState<
@@ -112,7 +169,7 @@ export function InstallmentProductsCard() {
     }
   }
 
-  const filteredProducts = products.filter((p) => p.productType === activeTab);
+  const filteredProducts = products.filter((p) => getProductGroup(p) === activeTab);
 
   return (
     <div className="border border-border p-6 bg-white space-y-6">
@@ -144,7 +201,7 @@ export function InstallmentProductsCard() {
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id as "phone" | "accessory" | "repair_part")}
+            onClick={() => setActiveTab(tab.id as "phone" | "laptop_tablet" | "gaming" | "accessory" | "repair_part")}
             className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all rounded-none -mb-[1px] ${
               activeTab === tab.id
                 ? "border-foreground text-foreground"
@@ -170,7 +227,7 @@ export function InstallmentProductsCard() {
             <thead>
               <tr className="border-b border-border bg-gray-50 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
                 <th className="py-3 px-4">Product Name</th>
-                <th className="py-3 px-4">Type</th>
+                <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4 w-40">Allow Plan</th>
                 <th className="py-3 px-4 w-44">Custom Profit Markup %</th>
                 <th className="py-3 px-4 w-44">Custom Deposit %</th>
@@ -193,8 +250,8 @@ export function InstallmentProductsCard() {
                         SKU: {p.sku}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-muted-foreground capitalize">
-                      {p.productType.replace("_", " ")}
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {p.categoryName || "N/A"}
                     </td>
                     <td className="py-3 px-4">
                       <label className="flex items-center gap-2 cursor-pointer font-medium text-foreground">
