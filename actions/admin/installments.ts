@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffUser } from "@/lib/supabase/admin-guard";
 
@@ -122,6 +122,7 @@ export async function saveInstallmentConfig(
   revalidatePath("/admin/installments");
   revalidatePath("/");
   revalidatePath("/products/[slug]");
+  revalidateTag("products");
   return { success: true };
 }
 
@@ -211,5 +212,6 @@ export async function updateProductInstallmentConfig(
   revalidatePath("/admin/installments");
   revalidatePath("/");
   revalidatePath("/products/[slug]");
+  revalidateTag("products");
   return { success: true };
 }

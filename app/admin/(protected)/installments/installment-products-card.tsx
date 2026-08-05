@@ -10,11 +10,18 @@ import {
   type ProductInstallmentConfigRow,
 } from "@/actions/admin/installments";
 
+const PRODUCT_TYPES = [
+  { id: "phone", label: "Phones" },
+  { id: "accessory", label: "Accessories" },
+  { id: "repair_part", label: "Repair Parts" },
+];
+
 export function InstallmentProductsCard() {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<ProductInstallmentConfigRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"phone" | "accessory" | "repair_part">("phone");
 
   // Local form states per product row
   const [rowStates, setRowStates] = useState<
@@ -105,6 +112,8 @@ export function InstallmentProductsCard() {
     }
   }
 
+  const filteredProducts = products.filter((p) => p.productType === activeTab);
+
   return (
     <div className="border border-border p-6 bg-white space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
@@ -129,13 +138,31 @@ export function InstallmentProductsCard() {
         </div>
       </div>
 
+      {/* Tabs bar */}
+      <div className="flex gap-2 border-b border-border -mt-2">
+        {PRODUCT_TYPES.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id as "phone" | "accessory" | "repair_part")}
+            className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all rounded-none -mb-[1px] ${
+              activeTab === tab.id
+                ? "border-foreground text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground text-xs font-semibold uppercase tracking-wider gap-2">
           <Loader2 className="size-4 animate-spin text-foreground" /> Loading products...
         </div>
-      ) : products.length === 0 ? (
+      ) : filteredProducts.length === 0 ? (
         <div className="text-center py-12 text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-          No products found.
+          No products found in this category.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -151,7 +178,7 @@ export function InstallmentProductsCard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {products.map((p) => {
+              {filteredProducts.map((p) => {
                 const state = rowStates[p.id] || {
                   allowInstallments: false,
                   profitPercentage: "",
