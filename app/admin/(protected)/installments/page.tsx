@@ -3,6 +3,7 @@ import { CreditCard } from "lucide-react";
 import { listInstallmentApplications, getInstallmentConfig } from "@/actions/admin/installments";
 import { InstallmentListClient } from "./installment-list-client";
 import { InstallmentSettingsCard } from "./installment-settings-card";
+import { InstallmentProductsCard } from "./installment-products-card";
 
 export const metadata: Metadata = {
   title: "Installment Applications - Admin",
@@ -28,6 +29,8 @@ export default async function AdminInstallmentsPage() {
       </div>
 
       <InstallmentSettingsCard initialConfig={config} />
+
+      <InstallmentProductsCard />
 
       <InstallmentListClient initialItems={items} />
     </div>

@@ -144,3 +144,72 @@ export async function updateInstallmentStatus(
   revalidatePath("/admin/installments");
   return { success: true };
 }
+
+export interface ProductInstallmentConfigRow {
+  id: string;
+  name: string;
+  sku: string;
+  productType: string;
+  allowInstallments: boolean;
+  installmentProfitPercentage: number | null;
+  installmentDepositPercentage: number | null;
+}
+
+export async function listProductsForInstallments(searchQuery?: string): Promise<ProductInstallmentConfigRow[]> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("products")
+    .select("id, name, sku, product_type, allow_installments, installment_profit_percentage, installment_deposit_percentage")
+    .order("name", { ascending: true });
+
+  if (searchQuery && searchQuery.trim() !== "") {
+    query = query.ilike("name", `%${searchQuery.trim()}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Failed to load products for installments:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    sku: row.sku,
+    productType: row.product_type,
+    allowInstallments: row.allow_installments,
+    installmentProfitPercentage: row.installment_profit_percentage,
+    installmentDepositPercentage: row.installment_deposit_percentage,
+  }));
+}
+
+export async function updateProductInstallmentConfig(
+  productId: string,
+  allowInstallments: boolean,
+  profitPercentage: number | null,
+  depositPercentage: number | null,
+): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("products")
+    .update({
+      allow_installments: allowInstallments,
+      installment_profit_percentage: profitPercentage,
+      installment_deposit_percentage: depositPercentage,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", productId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin/installments");
+  revalidatePath("/");
+  revalidatePath("/products/[slug]");
+  return { success: true };
+}
