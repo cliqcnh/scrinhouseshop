@@ -26,6 +26,7 @@ interface OrderRow {
   paystack_ref: string | null;
   delivery_address: Record<string, string | undefined>;
   created_at: string;
+  is_installment: boolean;
   order_items: OrderItemRow[];
 }
 
@@ -49,7 +50,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     .from("orders")
     .select(`
       id, status, subtotal, delivery_fee, total, paystack_ref,
-      delivery_address, created_at,
+      delivery_address, created_at, is_installment,
       order_items ( id, product_name, variant_label, image_url, price, quantity, subtotal )
     `)
     .eq("id", id)
@@ -63,39 +64,98 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   const isMock = mock === "1";
   const isPendingPayment = order.status === "pending_payment";
 
+  let installmentStatus = "pending_review";
+  if (order.is_installment) {
+    const { data: apps } = await (supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .from("installment_applications") as any)
+      .select("status")
+      .eq("order_id", id);
+    
+    if (apps && apps.length > 0) {
+      const hasUnapproved = apps.some((a: { status: string }) => a.status !== "approved");
+      const hasRejected = apps.some((a: { status: string }) => a.status === "rejected");
+      if (hasRejected) {
+        installmentStatus = "rejected";
+      } else if (hasUnapproved) {
+        installmentStatus = "pending_review";
+      } else {
+        installmentStatus = "approved";
+      }
+    }
+  }
+
+  let displayTitle = "Order confirmed!";
+  let displayIcon = <CheckCircle className="mx-auto mb-4 size-12 text-foreground" strokeWidth={1.5} />;
+  let displayDescription = "Thank you for your order. We'll send you an update when it ships.";
+
+  if (isPendingPayment) {
+    if (order.is_installment) {
+      if (installmentStatus === "pending_review") {
+        displayTitle = "Application Pending Review";
+        displayIcon = <AlertCircle className="mx-auto mb-4 size-12 text-yellow-600" strokeWidth={1.5} />;
+        displayDescription = "Your installment application is currently pending review. We will notify you once our team reviews your Ghana Card details. Payment will be enabled once approved.";
+      } else if (installmentStatus === "rejected") {
+        displayTitle = "Application Rejected";
+        displayIcon = <AlertCircle className="mx-auto mb-4 size-12 text-red-600" strokeWidth={1.5} />;
+        displayDescription = "Unfortunately, your hire-purchase installment application was rejected. Please contact support for details.";
+      } else {
+        displayTitle = "Application Approved";
+        displayIcon = <CheckCircle className="mx-auto mb-4 size-12 text-foreground" strokeWidth={1.5} />;
+        displayDescription = "Your application has been approved! Please pay the down payment below to complete your order.";
+      }
+    } else {
+      displayTitle = "Payment Pending";
+      displayIcon = <AlertCircle className="mx-auto mb-4 size-12 text-yellow-600" strokeWidth={1.5} />;
+      displayDescription = "Your payment is pending. Please complete payment using the button below to secure your items.";
+    }
+  } else if (isMock) {
+    displayTitle = "Order placed (test mode)";
+    displayDescription = "No real payment was taken. Add a Paystack secret key to enable live payments.";
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       {/* Success / Pending header */}
       <div className="mb-10 text-center">
-        {isPendingPayment ? (
-          <AlertCircle className="mx-auto mb-4 size-12 text-yellow-600" strokeWidth={1.5} />
-        ) : (
-          <CheckCircle className="mx-auto mb-4 size-12 text-foreground" strokeWidth={1.5} />
-        )}
+        {displayIcon}
         
         <h1 className="font-heading text-2xl font-bold text-foreground sm:text-3xl">
-          {isPendingPayment
-            ? "Payment Pending"
-            : isMock
-            ? "Order placed (test mode)"
-            : "Order confirmed!"}
+          {displayTitle}
         </h1>
         
         <p className="mt-2 text-sm text-muted-foreground">
-          {isPendingPayment
-            ? "Your payment is pending. Please complete payment using the button below to secure your items."
-            : isMock
-            ? "No real payment was taken. Add a Paystack secret key to enable live payments."
-            : "Thank you for your order. We'll send you an update when it ships."}
+          {displayDescription}
         </p>
 
         {isPendingPayment && (
-          <div className="mx-auto mt-6 max-w-sm border border-border p-4 bg-muted/20">
-            <p className="text-xs text-muted-foreground mb-3 text-left">
-              Amount Due: <span className="font-semibold text-foreground">{formatPrice(order.total)}</span>
-            </p>
-            <PaymentRetryButton orderId={order.id} />
-          </div>
+          order.is_installment ? (
+            installmentStatus === "approved" ? (
+              <div className="mx-auto mt-6 max-w-sm border border-border p-4 bg-muted/20">
+                <p className="text-xs text-muted-foreground mb-3 text-left">
+                  Down Payment Due: <span className="font-semibold text-foreground">{formatPrice(order.total)}</span>
+                </p>
+                <PaymentRetryButton orderId={order.id} />
+              </div>
+            ) : installmentStatus === "rejected" ? (
+              <div className="mx-auto mt-6 max-w-sm border border-red-200 p-4 bg-red-50 text-center rounded-none">
+                <p className="text-sm font-semibold text-red-700">Application Rejected</p>
+                <p className="text-xs text-red-600 mt-1">This installment application was not approved.</p>
+              </div>
+            ) : (
+              <div className="mx-auto mt-6 max-w-sm border border-border p-4 bg-muted/20 text-center rounded-none">
+                <p className="text-sm font-semibold text-foreground">Awaiting Approval</p>
+                <p className="text-xs text-muted-foreground mt-1">Our team is reviewing your application. Down payment will be enabled once approved.</p>
+              </div>
+            )
+          ) : (
+            <div className="mx-auto mt-6 max-w-sm border border-border p-4 bg-muted/20">
+              <p className="text-xs text-muted-foreground mb-3 text-left">
+                Amount Due: <span className="font-semibold text-foreground">{formatPrice(order.total)}</span>
+              </p>
+              <PaymentRetryButton orderId={order.id} />
+            </div>
+          )
         )}
 
         {order.paystack_ref && (

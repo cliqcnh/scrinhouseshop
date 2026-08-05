@@ -239,7 +239,7 @@ export async function placeOrder(
   const env = getServerEnv();
   let authorizationUrl: string | null = null;
 
-  if (remainingTotal > 0 && env.PAYSTACK_SECRET_KEY) {
+  if (remainingTotal > 0 && env.PAYSTACK_SECRET_KEY && !hasInstallment) {
     const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {

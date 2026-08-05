@@ -25,7 +25,7 @@ export async function retryPendingOrderPayment(orderId: string): Promise<RetryPa
     // 2. Load order
     const { data: order, error: orderErr } = await supabase
       .from("orders")
-      .select("id, status, total, delivery_address, user_id")
+      .select("id, status, total, delivery_address, user_id, is_installment")
       .eq("id", orderId)
       .maybeSingle();
 
@@ -40,6 +40,23 @@ export async function retryPendingOrderPayment(orderId: string): Promise<RetryPa
 
     if (order.status !== "pending_payment") {
       return { success: false, error: `Payment cannot be processed for an order with status "${order.status}".` };
+    }
+
+    // Installment check: must be approved first!
+    if (order.is_installment) {
+      const { data: apps, error: appsErr } = await (supabase
+        .from("installment_applications") as any)
+        .select("status")
+        .eq("order_id", orderId);
+
+      if (appsErr) {
+        return { success: false, error: `Failed to verify installment status: ${appsErr.message}` };
+      }
+
+      const hasUnapproved = (apps ?? []).some((app: { status: string }) => app.status !== "approved");
+      if (hasUnapproved || (apps ?? []).length === 0) {
+        return { success: false, error: "Your installment application is pending review. You can make payment once approved." };
+      }
     }
 
     const total = Number(order.total);

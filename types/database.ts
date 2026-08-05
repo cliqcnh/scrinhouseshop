@@ -267,6 +267,9 @@ export interface Database {
           paystack_channel: string | null;
           notes: string | null;
           wallet_amount_applied: number;
+          is_installment: boolean;
+          installment_deposit: number;
+          installment_balance: number;
           created_at: string;
           updated_at: string;
         };
@@ -282,6 +285,9 @@ export interface Database {
           paystack_channel?: string | null;
           notes?: string | null;
           wallet_amount_applied?: number;
+          is_installment?: boolean;
+          installment_deposit?: number;
+          installment_balance?: number;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Row"]>;
         Relationships: [];

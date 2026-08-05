@@ -28,11 +28,11 @@ export default async function AdminInstallmentsPage() {
         </div>
       </div>
 
+      <InstallmentListClient initialItems={items} />
+
       <InstallmentSettingsCard initialConfig={config} />
 
       <InstallmentProductsCard />
-
-      <InstallmentListClient initialItems={items} />
     </div>
   );
 }
