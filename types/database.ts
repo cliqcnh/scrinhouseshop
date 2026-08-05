@@ -153,6 +153,9 @@ export interface Database {
           tags: string[];
           is_featured: boolean;
           is_active: boolean;
+          allow_installments: boolean;
+          installment_profit_percentage: number | null;
+          installment_deposit_percentage: number | null;
           seo_title: string | null;
           seo_description: string | null;
           avg_rating: number;

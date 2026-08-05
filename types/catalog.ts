@@ -49,6 +49,9 @@ export interface ProductSummary {
   primaryImageUrl: string | null;
   brand: Brand | null;
   inStock: boolean;
+  allowInstallments?: boolean;
+  installmentProfitPercentage?: number | null;
+  installmentDepositPercentage?: number | null;
 }
 
 export interface ProductDetail extends ProductSummary {

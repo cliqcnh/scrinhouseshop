@@ -5,11 +5,16 @@ import { listInstallmentApplications, updateInstallmentStatus } from "@/actions/
 // Mocks
 const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
+const mockInsert = vi.fn();
 
 const mockSupabase = {
+  auth: {
+    getUser: vi.fn(() => Promise.resolve({ data: { user: { id: "user-1", email: "user@example.com" } } })),
+  },
   from: vi.fn(() => ({
     select: mockSelect,
     update: mockUpdate,
+    insert: mockInsert,
   })),
 };
 
@@ -23,6 +28,12 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}));
+
+vi.mock("@/lib/notifications", () => ({
+  sendSMS: vi.fn().mockResolvedValue(true),
+  sendEmail: vi.fn().mockResolvedValue(true),
 }));
 
 describe("Installment Financial Math & Server Actions", () => {
@@ -35,11 +46,17 @@ describe("Installment Financial Math & Server Actions", () => {
     const chain: any = {
       order: vi.fn().mockImplementation(() => chain),
       eq: vi.fn().mockImplementation(() => chain),
+      in: vi.fn().mockImplementation(() => chain),
+      select: vi.fn().mockImplementation(() => chain),
+      single: vi.fn().mockImplementation(() => Promise.resolve(queryResult)),
+      maybeSingle: vi.fn().mockImplementation(() => Promise.resolve(queryResult)),
+      insert: vi.fn().mockImplementation(() => chain),
       then: vi.fn().mockImplementation((resolve) => resolve(queryResult)),
     };
 
     mockSelect.mockReturnValue(chain);
     mockUpdate.mockReturnValue(chain);
+    mockInsert.mockReturnValue(chain);
   });
 
   describe("calculateInstallment", () => {
@@ -111,6 +128,145 @@ describe("Installment Financial Math & Server Actions", () => {
       expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
         status: "approved",
       }));
+    });
+
+    it("places installment order with custom profit and deposit rates on product override", async () => {
+      const mockProduct = {
+        name: "Custom iPhone",
+        product_type: "phone",
+        allow_installments: true,
+        installment_profit_percentage: 15,
+        installment_deposit_percentage: 30,
+        categories: { slug: "phones" }
+      };
+
+      const mockVariant = {
+        id: "variant-custom",
+        sku: "CUST-IPH",
+        price: 10000,
+        stock_quantity: 5,
+        is_active: true,
+        products: mockProduct
+      };
+
+      mockSelect
+        .mockReturnValueOnce({
+          in: vi.fn().mockReturnValue({
+            then: (resolve: any) => resolve({ data: [mockVariant], error: null })
+          })
+        })
+        .mockReturnValueOnce({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
+          })
+        });
+
+      mockInsert.mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { id: "order-custom-123" }, error: null })
+        })
+      });
+
+      const { placeOrder } = await import("@/actions/checkout/place-order");
+      const res = await placeOrder(
+        [
+          {
+            variantId: "variant-custom",
+            productId: "prod-custom",
+            name: "Custom iPhone",
+            variantLabel: "Red",
+            price: 10000,
+            quantity: 1,
+            isInstallment: true,
+            depositAmount: 3450,
+            remainingBalance: 8050,
+            totalInstallmentPrice: 11500
+          }
+        ],
+        {
+          fullName: "Ribeiro",
+          phone: "0240000000",
+          region: "Greater Accra",
+          city: "Accra",
+          streetAddress: "123 Street",
+        },
+        {
+          ghanaCardNumber: "GHA-111111111-1",
+          ghanaCardFrontUrl: "https://front.png",
+          ghanaCardBackUrl: "https://back.png"
+        }
+      );
+
+      expect(res.orderId).toBe("order-custom-123");
+
+      expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
+        is_installment: true,
+        installment_deposit: 3450,
+        installment_balance: 8050,
+      }));
+    });
+
+    it("rejects installment order if product does not allow installments", async () => {
+      const mockProduct = {
+        name: "Custom iPhone 2",
+        product_type: "phone",
+        allow_installments: false,
+        installment_profit_percentage: null,
+        installment_deposit_percentage: null,
+        categories: { slug: "phones" }
+      };
+
+      const mockVariant = {
+        id: "variant-custom-2",
+        sku: "CUST-IPH-2",
+        price: 10000,
+        stock_quantity: 5,
+        is_active: true,
+        products: mockProduct
+      };
+
+      mockSelect
+        .mockReturnValueOnce({
+          in: vi.fn().mockReturnValue({
+            then: (resolve: any) => resolve({ data: [mockVariant], error: null })
+          })
+        })
+        .mockReturnValueOnce({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
+          })
+        });
+
+      const { placeOrder } = await import("@/actions/checkout/place-order");
+      
+      await expect(placeOrder(
+        [
+          {
+            variantId: "variant-custom-2",
+            productId: "prod-custom-2",
+            name: "Custom iPhone 2",
+            variantLabel: "Red",
+            price: 10000,
+            quantity: 1,
+            isInstallment: true,
+            depositAmount: 4800,
+            remainingBalance: 7200,
+            totalInstallmentPrice: 12000
+          }
+        ],
+        {
+          fullName: "Ribeiro",
+          phone: "0240000000",
+          region: "Greater Accra",
+          city: "Accra",
+          streetAddress: "123 Street",
+        },
+        {
+          ghanaCardNumber: "GHA-111111111-1",
+          ghanaCardFrontUrl: "https://front.png",
+          ghanaCardBackUrl: "https://back.png"
+        }
+      )).rejects.toThrow("Installment payment plan is not enabled for \"Custom iPhone 2\".");
     });
   });
 });

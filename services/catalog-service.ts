@@ -23,6 +23,9 @@ type ProductRow = {
   avg_rating: number;
   review_count: number;
   is_featured: boolean;
+  allow_installments: boolean;
+  installment_profit_percentage: number | null;
+  installment_deposit_percentage: number | null;
   tags: string[];
   seo_title: string | null;
   seo_description: string | null;
@@ -44,6 +47,7 @@ type ProductRow = {
 const PRODUCT_SELECT = `
   id, name, slug, description, product_type, condition, base_price, compare_at_price,
   avg_rating, review_count, is_featured, tags, seo_title, seo_description,
+  allow_installments, installment_profit_percentage, installment_deposit_percentage,
   category:categories!products_category_id_fkey ( id, parent_id, name, slug, description, image_url ),
   brand:brands ( id, name, slug, logo_url ),
   product_images ( id, url, alt_text, is_primary, display_order ),
@@ -71,6 +75,9 @@ function toSummary(row: ProductRow): ProductSummary {
     primaryImageUrl: primaryImage?.url ?? null,
     brand: row.brand ? { id: row.brand.id, name: row.brand.name, slug: row.brand.slug, logoUrl: row.brand.logo_url } : null,
     inStock,
+    allowInstallments: row.allow_installments,
+    installmentProfitPercentage: row.installment_profit_percentage,
+    installmentDepositPercentage: row.installment_deposit_percentage,
   };
 }
 

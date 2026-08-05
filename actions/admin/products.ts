@@ -35,6 +35,9 @@ export async function saveProduct(values: ProductFormValues): Promise<ActionResu
     tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
     is_featured: data.isFeatured,
     is_active: data.isActive,
+    allow_installments: data.allowInstallments,
+    installment_profit_percentage: data.installmentProfitPercentage !== undefined ? data.installmentProfitPercentage : null,
+    installment_deposit_percentage: data.installmentDepositPercentage !== undefined ? data.installmentDepositPercentage : null,
   };
 
   let productId = data.id;

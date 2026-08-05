@@ -29,6 +29,9 @@ export const productFormSchema = z.object({
   tags: z.string().trim().optional(),
   isFeatured: z.boolean(),
   isActive: z.boolean(),
+  allowInstallments: z.boolean(),
+  installmentProfitPercentage: z.number().int().min(0).max(100).nullable().optional(),
+  installmentDepositPercentage: z.number().int().min(0).max(100).nullable().optional(),
   variants: z.array(productVariantSchema).min(1, "Add at least one variant"),
 });
 

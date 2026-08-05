@@ -160,6 +160,9 @@ interface RawAdminProductDetail {
   compare_at_price: number | null;
   is_featured: boolean;
   is_active: boolean;
+  allow_installments: boolean;
+  installment_profit_percentage: number | null;
+  installment_deposit_percentage: number | null;
   tags: string[];
   sku: string;
   category_id: string;
@@ -178,7 +181,7 @@ export async function getAdminProductById(id: string): Promise<AdminProductDetai
     .from("products")
     .select<string, RawAdminProductDetail>(
       `id, name, slug, description, product_type, condition, base_price, compare_at_price,
-       is_featured, is_active, tags, sku, category_id, brand_id,
+       is_featured, is_active, allow_installments, installment_profit_percentage, installment_deposit_percentage, tags, sku, category_id, brand_id,
        product_images ( id, url, alt_text, is_primary, display_order ),
        product_variants ( id, sku, storage, color, price, stock_quantity, is_active )`,
     )
@@ -207,6 +210,9 @@ export async function getAdminProductById(id: string): Promise<AdminProductDetai
       tags: data.tags.join(", "),
       isFeatured: data.is_featured,
       isActive: data.is_active,
+      allowInstallments: data.allow_installments,
+      installmentProfitPercentage: data.installment_profit_percentage,
+      installmentDepositPercentage: data.installment_deposit_percentage,
       variants: variants
         .filter((v) => v.is_active)
         .map((v) => ({

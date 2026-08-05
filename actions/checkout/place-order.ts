@@ -49,12 +49,27 @@ export async function placeOrder(
   // ── Stock & Financial Validation ───────────────────────────────────────────
   const variantIds = cartItems.map((i) => i.variantId);
   const { data: variants, error: variantErr } = await (supabase.from("product_variants") as any)
-    .select("id, sku, price, stock_quantity, is_active, products(name, product_type, categories!products_category_id_fkey(slug))")
+    .select("id, sku, price, stock_quantity, is_active, products(name, product_type, allow_installments, installment_profit_percentage, installment_deposit_percentage, categories!products_category_id_fkey(slug))")
     .in("id", variantIds);
 
   if (variantErr) throw new Error(`Stock check failed: ${variantErr.message}`);
 
+  // Fetch global installment settings
+  const { data: globalSetting } = await (supabase.from("store_settings") as any)
+    .select("value")
+    .eq("key", "installment_config")
+    .maybeSingle();
+
+  const globalConfig = globalSetting
+    ? (globalSetting as any).value
+    : { profit_percentage: 20, deposit_percentage: 40, is_enabled: true };
+
+  const globalProfitRate = (globalConfig.profit_percentage ?? 20) / 100;
+  const globalDepositRate = (globalConfig.deposit_percentage ?? 40) / 100;
+
   let calculatedSubtotal = 0;
+  let verifiedDepositTotal = 0;
+  let verifiedBalanceTotal = 0;
 
   for (const item of cartItems) {
     const variant = variants?.find((v: any) => v.id === item.variantId);
@@ -68,16 +83,35 @@ export async function placeOrder(
     }
 
     const categorySlug = (variant as any).products?.categories?.slug;
-    if (item.isInstallment && categorySlug !== "phones") {
-      throw new Error(`Installment payment plan is only available for phones.`);
-    }
-
+    const parentProduct = (variant as any).products;
+    const isAllowedForProduct = parentProduct?.allow_installments !== false;
     const realPrice = Number(variant.price);
+
     if (item.isInstallment) {
-      // Calculate verified deposit amount from server math (e.g. 40% deposit of 20% markup)
-      const totalInstallmentPrice = realPrice * 1.20;
-      const depositAmount = totalInstallmentPrice * 0.40;
+      if (!isAllowedForProduct) {
+        throw new Error(`Installment payment plan is not enabled for "${item.name}".`);
+      }
+      if (categorySlug !== "phones") {
+        throw new Error(`Installment payment plan is only available for phones.`);
+      }
+
+      // Read custom values if defined, fallback to global values
+      const profitRate = parentProduct.installment_profit_percentage !== null
+        ? parentProduct.installment_profit_percentage / 100
+        : globalProfitRate;
+
+      const depositRate = parentProduct.installment_deposit_percentage !== null
+        ? parentProduct.installment_deposit_percentage / 100
+        : globalDepositRate;
+
+      // Calculate verified deposit amount from server math
+      const totalInstallmentPrice = Math.round(realPrice * (1 + profitRate) * 100) / 100;
+      const depositAmount = Math.round(totalInstallmentPrice * depositRate * 100) / 100;
+      const remainingBalance = Math.round((totalInstallmentPrice - depositAmount) * 100) / 100;
+
       calculatedSubtotal += depositAmount * item.quantity;
+      verifiedDepositTotal += depositAmount * item.quantity;
+      verifiedBalanceTotal += remainingBalance * item.quantity;
     } else {
       calculatedSubtotal += realPrice * item.quantity;
     }
@@ -106,8 +140,8 @@ export async function placeOrder(
 
   const remainingTotal = total - appliedWalletAmount;
 
-  const installmentDeposit = cartItems.reduce((sum, i) => sum + (i.isInstallment && i.depositAmount !== undefined ? i.depositAmount * i.quantity : 0), 0);
-  const installmentBalance = cartItems.reduce((sum, i) => sum + (i.isInstallment && i.remainingBalance !== undefined ? i.remainingBalance * i.quantity : 0), 0);
+  const installmentDeposit = verifiedDepositTotal;
+  const installmentBalance = verifiedBalanceTotal;
 
   // ── Insert order ──────────────────────────────────────────────────────────
   const paystackRef = `SCR-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;

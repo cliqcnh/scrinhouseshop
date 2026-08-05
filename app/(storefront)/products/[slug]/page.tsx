@@ -45,6 +45,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const isWishlisted = wishlistProductIds.includes(product.id);
   const discount = discountPercent(product.basePrice, product.compareAtPrice);
 
+  const mergedInstallmentConfig = {
+    profitPercentage: product.installmentProfitPercentage !== null && product.installmentProfitPercentage !== undefined
+      ? product.installmentProfitPercentage
+      : (installmentConfig?.profitPercentage ?? 20),
+    depositPercentage: product.installmentDepositPercentage !== null && product.installmentDepositPercentage !== undefined
+      ? product.installmentDepositPercentage
+      : (installmentConfig?.depositPercentage ?? 40),
+    isEnabled: product.allowInstallments !== false && (installmentConfig?.isEnabled !== false),
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -93,7 +103,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             )}
           </div>
 
-          <AddToCartPanel product={product} initialWishlistState={isWishlisted} installmentConfig={installmentConfig} />
+          <AddToCartPanel product={product} initialWishlistState={isWishlisted} installmentConfig={mergedInstallmentConfig} />
 
           {product.description && (
             <div className="mt-8 border-t border-border pt-6">

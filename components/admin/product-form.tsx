@@ -53,7 +53,12 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
-    defaultValues: initialValues ?? {
+    defaultValues: initialValues ? {
+      ...initialValues,
+      allowInstallments: initialValues.allowInstallments ?? true,
+      installmentProfitPercentage: initialValues.installmentProfitPercentage ?? null,
+      installmentDepositPercentage: initialValues.installmentDepositPercentage ?? null,
+    } : {
       name: "",
       slug: "",
       description: "",
@@ -67,6 +72,9 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
       tags: "",
       isFeatured: false,
       isActive: true,
+      allowInstallments: true,
+      installmentProfitPercentage: null,
+      installmentDepositPercentage: null,
       variants: [EMPTY_VARIANT],
     },
   });
@@ -233,6 +241,51 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
           />
           <Label htmlFor="isActive">Active (visible on storefront)</Label>
         </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-background p-5 sm:grid-cols-2">
+        <h2 className="text-sm font-semibold text-foreground sm:col-span-2">Installment Settings</h2>
+        
+        <div className="flex items-center gap-2 sm:col-span-2">
+          <Checkbox
+            checked={watch("allowInstallments")}
+            onCheckedChange={(v) => setValue("allowInstallments", v === true)}
+            id="allowInstallments"
+          />
+          <Label htmlFor="allowInstallments">Allow purchases via installment plan</Label>
+        </div>
+
+        {watch("allowInstallments") && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="installmentProfitPercentage">Custom Profit Markup % (leave blank for store default)</Label>
+              <Input
+                id="installmentProfitPercentage"
+                type="number"
+                placeholder="e.g. 20"
+                value={watch("installmentProfitPercentage") ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                  setValue("installmentProfitPercentage", val);
+                }}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="installmentDepositPercentage">Custom Deposit % (leave blank for store default)</Label>
+              <Input
+                id="installmentDepositPercentage"
+                type="number"
+                placeholder="e.g. 40"
+                value={watch("installmentDepositPercentage") ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                  setValue("installmentDepositPercentage", val);
+                }}
+              />
+            </div>
+          </>
+        )}
       </section>
 
       <section className="rounded-lg border border-border bg-background p-5">
