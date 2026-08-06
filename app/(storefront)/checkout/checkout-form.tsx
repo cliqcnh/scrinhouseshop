@@ -89,6 +89,8 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
   // Installment Ghana Card Verification State
   const hasInstallment = items.some((i) => i.isInstallment);
   const [ghanaCardNumber, setGhanaCardNumber] = useState("");
+  const [ghanaCardFrontUrl, setGhanaCardFrontUrl] = useState("");
+  const [ghanaCardBackUrl, setGhanaCardBackUrl] = useState("");
 
   function handleAddressChange(id: string) {
     setSelectedAddressId(id);
@@ -124,6 +126,45 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
     );
   }
 
+  function handleFileChange(file: File, setter: (val: string) => void) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (!e.target?.result) return;
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          setter(canvas.toDataURL("image/jpeg", 0.7));
+        } else {
+          setter(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -134,8 +175,8 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
     }
 
     if (hasInstallment) {
-      if (!ghanaCardNumber) {
-        setError("Ghana Card Number (PIN) is required for installment payment.");
+      if (!ghanaCardNumber || !ghanaCardFrontUrl || !ghanaCardBackUrl) {
+        setError("Ghana Card Number and both Front & Back photos are required for installment payment.");
         return;
       }
     }
@@ -144,7 +185,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
     try {
       const address: DeliveryAddress = { fullName, phone, region, city, landmark: landmark || undefined };
       const installmentDetails = hasInstallment
-        ? { ghanaCardNumber }
+        ? { ghanaCardNumber, ghanaCardFrontUrl, ghanaCardBackUrl }
         : undefined;
 
       const cartTotal = Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0));
@@ -288,7 +329,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                 Ghana Card Verification (Required for Installments)
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                To complete your 40% Deposit Hire Purchase order, please provide your Ghana Card PIN.
+                To complete your 40% Deposit Hire Purchase order, please provide your Ghana Card details.
               </p>
             </div>
 
@@ -305,6 +346,52 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                 className={inputCls}
                 placeholder="GHA-000000000-0"
               />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="co-card-front" className={labelCls}>
+                  Ghana Card Front Photo *
+                </label>
+                <input
+                  id="co-card-front"
+                  type="file"
+                  accept="image/*"
+                  required
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileChange(f, setGhanaCardFrontUrl);
+                  }}
+                  className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-none file:border file:border-border file:bg-white file:text-xs file:font-semibold file:text-foreground hover:file:bg-accent cursor-pointer"
+                />
+                {ghanaCardFrontUrl && (
+                  <div className="mt-2 text-[10px] text-green-600 font-semibold flex items-center gap-1">
+                    ✓ Front card photo attached
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="co-card-back" className={labelCls}>
+                  Ghana Card Back Photo *
+                </label>
+                <input
+                  id="co-card-back"
+                  type="file"
+                  accept="image/*"
+                  required
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileChange(f, setGhanaCardBackUrl);
+                  }}
+                  className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-none file:border file:border-border file:bg-white file:text-xs file:font-semibold file:text-foreground hover:file:bg-accent cursor-pointer"
+                />
+                {ghanaCardBackUrl && (
+                  <div className="mt-2 text-[10px] text-green-600 font-semibold flex items-center gap-1">
+                    ✓ Back card photo attached
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
