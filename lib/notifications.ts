@@ -26,11 +26,11 @@ export function normalizePhoneNumber(phone: string): string {
  * If no SMS keys are configured, outputs to system logs.
  */
 export async function sendSMS(to: string, message: string): Promise<boolean> {
-  const wigalApiKey = process.env.WIGAL_API_KEY;
-  const wigalUsername = process.env.WIGAL_USERNAME;
-  const wigalPassword = process.env.WIGAL_PASSWORD;
-  const arkeselApiKey = process.env.SMS_API_KEY;
-  const senderId = process.env.SMS_SENDER_ID || "ScrinHouse";
+  const wigalApiKey = process.env.WIGAL_API_KEY?.trim();
+  const wigalUsername = process.env.WIGAL_USERNAME?.trim();
+  const wigalPassword = process.env.WIGAL_PASSWORD?.trim();
+  const arkeselApiKey = process.env.SMS_API_KEY?.trim();
+  const senderId = (process.env.SMS_SENDER_ID || "ScrinHouse").trim();
   const normalizedTo = normalizePhoneNumber(to);
 
   // If no SMS gateway keys configured, mock log to console
