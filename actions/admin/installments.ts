@@ -167,12 +167,12 @@ export async function updateInstallmentStatus(
 
     if (phone) {
       if (status === "approved") {
-        sendSMS(
+        await sendSMS(
           phone,
           `Hi ${fullName}, your ScrinHouse installment application for order #${shortOrderId} has been approved! Complete your down payment of GH₵${deposit} here: ${orderLink}`
         );
       } else if (status === "rejected") {
-        sendSMS(
+        await sendSMS(
           phone,
           `Hi ${fullName}, your ScrinHouse installment application for order #${shortOrderId} was not approved. Notes: ${notes ?? "No reasons specified."} Check details: ${orderLink}`
         );

@@ -121,9 +121,9 @@ export async function updateRepairBooking(
     }
     message += ` Track here: ${trackingLink}`;
 
-    sendSMS(booking.customer_phone, message);
+    await sendSMS(booking.customer_phone, message);
 
-    sendEmail(
+    await sendEmail(
       booking.customer_email,
       `Repair Booking Update - ScrinHouse`,
       `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">

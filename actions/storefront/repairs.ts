@@ -99,12 +99,12 @@ export async function createRepairBooking(values: RepairBookingValues): Promise<
   const formattedAmount = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(values.estimatedAmount);
   const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/track?q=${data.id}`;
 
-  sendSMS(
+  await sendSMS(
     values.customerPhone,
     `Hi ${values.customerName}, your ScrinHouse repair booking for ${values.deviceModel} (${values.serviceType}) is confirmed! Estimate: ${formattedAmount}. Track status: ${trackingLink}`
   );
 
-  sendEmail(
+  await sendEmail(
     values.customerEmail,
     `Repair Booking Received - ScrinHouse`,
     `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">

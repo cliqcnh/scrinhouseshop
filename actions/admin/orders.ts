@@ -170,29 +170,28 @@ export async function updateOrderStatus(orderId: string, status: any): Promise<{
     const readableStatus = status.replace(/_/g, " ");
 
     if (customerPhone) {
-      sendSMS(
+      await sendSMS(
         customerPhone,
         `Hi ${customerName}, your ScrinHouse order #${order.id.slice(0, 8).toUpperCase()} status is now: ${readableStatus.toUpperCase()}. Track: ${trackingLink}`
       );
     }
 
     if (order.user_id) {
-      supabase.auth.admin.getUserById(order.user_id).then(({ data: userData }) => {
-        const email = userData?.user?.email;
-        if (email) {
-          sendEmail(
-            email,
-            `Order Updated - ScrinHouse`,
-            `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
-              <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">Order Status Update</h2>
-              <p>Hello ${customerName},</p>
-              <p>The status of your ScrinHouse order <strong>#${order.id.slice(0, 8).toUpperCase()}</strong> has been updated to: <span style="text-transform: uppercase; font-weight: bold;">${readableStatus}</span>.</p>
-              <p>You can track the live progress of your shipment anytime: <a href="${trackingLink}">Track Shipment Status</a></p>
-              <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>
-            </div>`
-          );
-        }
-      });
+      const { data: userData } = await supabase.auth.getUser();
+      const email = userData?.user?.email;
+      if (email) {
+        await sendEmail(
+          email,
+          `Order Updated - ScrinHouse`,
+          `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
+            <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">Order Status Update</h2>
+            <p>Hello ${customerName},</p>
+            <p>The status of your ScrinHouse order <strong>#${order.id.slice(0, 8).toUpperCase()}</strong> has been updated to: <span style="text-transform: uppercase; font-weight: bold;">${readableStatus}</span>.</p>
+            <p>You can track the live progress of your shipment anytime: <a href="${trackingLink}">Track Shipment Status</a></p>
+            <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>
+          </div>`
+        );
+      }
     }
   }
 
@@ -288,32 +287,31 @@ export async function assignProductWarranty(
 
   // Trigger warranty activation notification
   const warrantyLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/warranty?q=${trimmedSerial}`;
-  sendSMS(
+  await sendSMS(
     customerPhone,
     `Hi ${customerName}, your product warranty for IMEI/Serial ${trimmedSerial} has been registered and is now active! Check coverage details here: ${warrantyLink}`
   );
 
-  // Fetch customer email from Auth in background
+  // Fetch customer email from Auth
   if (item.order?.user_id) {
-    supabase.auth.admin.getUserById(item.order.user_id).then(({ data: userData }) => {
-      const email = userData?.user?.email;
-      if (email) {
-        sendEmail(
-          email,
-          `Warranty Activated - ScrinHouse`,
-          `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
-            <h2 style="color: #22c55e; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Warranty Registered!</h2>
-            <p>Hello ${customerName},</p>
-            <p>Your product's warranty coverage has been registered successfully.</p>
-            <p><strong>Device IMEI / Serial:</strong> ${trimmedSerial}</p>
-            <p><strong>Starts At:</strong> ${startsAt.toLocaleDateString()}</p>
-            <p><strong>Ends At:</strong> ${endsAt.toLocaleDateString()}</p>
-            <p>Verify coverage and view remaining days: <a href="${warrantyLink}">Verify Warranty Coverage</a></p>
-            <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>
-          </div>`
-        );
-      }
-    });
+    const { data: userData } = await supabase.auth.admin.getUserById(item.order.user_id);
+    const email = userData?.user?.email;
+    if (email) {
+      await sendEmail(
+        email,
+        `Warranty Activated - ScrinHouse`,
+        `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
+          <h2 style="color: #22c55e; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Warranty Registered!</h2>
+          <p>Hello ${customerName},</p>
+          <p>Your product's warranty coverage has been registered successfully.</p>
+          <p><strong>Device IMEI / Serial:</strong> ${trimmedSerial}</p>
+          <p><strong>Starts At:</strong> ${startsAt.toLocaleDateString()}</p>
+          <p><strong>Ends At:</strong> ${endsAt.toLocaleDateString()}</p>
+          <p>Verify coverage and view remaining days: <a href="${warrantyLink}">Verify Warranty Coverage</a></p>
+          <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>
+        </div>`
+      );
+    }
   }
 
   revalidatePath(`/admin/orders`);

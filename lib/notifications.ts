@@ -98,9 +98,10 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
         });
       }
 
+      const resText = await res.text();
+      console.log("Wigal SMS Response:", resText);
       if (!res.ok) {
-        const errText = await res.text();
-        console.error(`Wigal SMS delivery error: HTTP ${res.status} - ${errText}`);
+        console.error(`Wigal SMS delivery error: HTTP ${res.status} - ${resText}`);
         return false;
       }
       return true;

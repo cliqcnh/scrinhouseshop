@@ -96,14 +96,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (customerPhone) {
-      sendSMS(
+      await sendSMS(
         customerPhone,
         `Hi ${customerName}, your payment of ${formattedTotal} for order #${order.id.slice(0, 8).toUpperCase()} was received successfully! We are now processing your shipment. Track here: ${trackingLink}`
       );
     }
 
     if (userEmail) {
-      sendEmail(
+      await sendEmail(
         userEmail,
         `Payment Confirmed - ScrinHouse`,
         `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">

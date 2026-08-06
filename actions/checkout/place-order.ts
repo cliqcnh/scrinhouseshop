@@ -270,17 +270,17 @@ export async function placeOrder(
     const formattedTotal = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(total);
     const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/track?q=${order.id}`;
     
-    sendSMS(
+    await sendSMS(
       address.phone,
       `Hello ${address.fullName}, your ScrinHouse order has been received! Total: ${formattedTotal}. Ref: ${paystackRef}. Track here: ${trackingLink}`
     );
 
-    sendSMS(
+    await sendSMS(
       "0559257401",
       `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} placed by ${address.fullName} (${address.phone}). Total: ${formattedTotal}. Type: ${hasInstallment ? "Installment" : "Regular"}`
     );
 
-    sendEmail(
+    await sendEmail(
       user.email,
       `Order Received - ScrinHouse`,
       `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
