@@ -46,7 +46,7 @@ export async function listInstallmentApplications(): Promise<InstallmentApplicat
       notes,
       created_at,
       profiles (full_name, phone),
-      products (name, primary_image_url)
+      products (name)
     `)
     .order("created_at", { ascending: false });
 
@@ -62,7 +62,7 @@ export async function listInstallmentApplications(): Promise<InstallmentApplicat
     applicantName: row.profiles?.full_name ?? "Customer",
     applicantPhone: row.profiles?.phone ?? "N/A",
     productName: row.products?.name ?? "Smartphone",
-    productImage: row.products?.primary_image_url ?? null,
+    productImage: null,
     basePrice: Number(row.base_price),
     totalPrice: Number(row.total_price),
     depositAmount: Number(row.deposit_amount),
