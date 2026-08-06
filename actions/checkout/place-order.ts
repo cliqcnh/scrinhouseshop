@@ -16,8 +16,8 @@ export interface DeliveryAddress {
 
 export interface InstallmentDetails {
   ghanaCardNumber: string;
-  ghanaCardFrontUrl: string;
-  ghanaCardBackUrl: string;
+  ghanaCardFrontUrl?: string;
+  ghanaCardBackUrl?: string;
 }
 
 export interface PlaceOrderResult {
@@ -204,8 +204,8 @@ export async function placeOrder(
         deposit_amount: item.depositAmount ?? item.price * 0.48,
         remaining_balance: item.remainingBalance ?? item.price * 0.72,
         ghana_card_number: installmentDetails.ghanaCardNumber,
-        ghana_card_front_url: installmentDetails.ghanaCardFrontUrl,
-        ghana_card_back_url: installmentDetails.ghanaCardBackUrl,
+        ghana_card_front_url: installmentDetails.ghanaCardFrontUrl || "N/A",
+        ghana_card_back_url: installmentDetails.ghanaCardBackUrl || "N/A",
         status: "pending_review",
       }));
 

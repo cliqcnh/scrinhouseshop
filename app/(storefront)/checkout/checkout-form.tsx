@@ -89,9 +89,6 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
   // Installment Ghana Card Verification State
   const hasInstallment = items.some((i) => i.isInstallment);
   const [ghanaCardNumber, setGhanaCardNumber] = useState("");
-  const [ghanaCardFrontUrl, setGhanaCardFrontUrl] = useState("");
-  const [ghanaCardBackUrl, setGhanaCardBackUrl] = useState("");
-  const [scanningCard, setScanningCard] = useState(false);
 
   function handleAddressChange(id: string) {
     setSelectedAddressId(id);
@@ -127,33 +124,6 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
     );
   }
 
-  function handleFileRead(file: File, setter: (val: string) => void, isFront = false) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        setter(e.target.result as string);
-
-        if (isFront) {
-          setScanningCard(true);
-          toast.info("Extracting details from Ghana Card...", { icon: "🔍" });
-          setTimeout(() => {
-            const randomDigits = Math.floor(100000000 + Math.random() * 900000000);
-            const checkDigit = Math.floor(Math.random() * 10);
-            const mockPin = `GHA-${randomDigits}-${checkDigit}`;
-            
-            setGhanaCardNumber(mockPin);
-            setScanningCard(false);
-            toast.success("Ghana Card OCR extraction complete!", {
-              description: `Pre-filled PIN: ${mockPin}`,
-              icon: "✅",
-            });
-          }, 1500);
-        }
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -164,8 +134,8 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
     }
 
     if (hasInstallment) {
-      if (!ghanaCardNumber || !ghanaCardFrontUrl || !ghanaCardBackUrl) {
-        setError("Ghana Card Number and both Front & Back photos are required for installment payment.");
+      if (!ghanaCardNumber) {
+        setError("Ghana Card Number (PIN) is required for installment payment.");
         return;
       }
     }
@@ -174,7 +144,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
     try {
       const address: DeliveryAddress = { fullName, phone, region, city, landmark: landmark || undefined };
       const installmentDetails = hasInstallment
-        ? { ghanaCardNumber, ghanaCardFrontUrl, ghanaCardBackUrl }
+        ? { ghanaCardNumber }
         : undefined;
 
       const cartTotal = Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0));
@@ -318,78 +288,23 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                 Ghana Card Verification (Required for Installments)
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                To complete your 40% Deposit Hire Purchase order, please provide your Ghana Card details.
+                To complete your 40% Deposit Hire Purchase order, please provide your Ghana Card PIN.
               </p>
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="co-ghana-card-num" className={labelCls}>
-                  Ghana Card Number (PIN) *
-                </label>
-                {scanningCard && (
-                  <span className="text-[10px] text-yellow-600 font-semibold animate-pulse flex items-center gap-1">
-                    <span className="inline-block size-2 bg-yellow-600 rounded-full animate-ping" />
-                    Scanning...
-                  </span>
-                )}
-              </div>
+              <label htmlFor="co-ghana-card-num" className={labelCls}>
+                Ghana Card Number (PIN) *
+              </label>
               <input
                 id="co-ghana-card-num"
                 type="text"
                 required
-                disabled={scanningCard}
                 value={ghanaCardNumber}
                 onChange={(e) => setGhanaCardNumber(e.target.value)}
-                className={`${inputCls} ${scanningCard ? "border-yellow-500 bg-yellow-50/10 cursor-not-allowed" : ""}`}
+                className={inputCls}
                 placeholder="GHA-000000000-0"
               />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="co-card-front" className={labelCls}>
-                  Ghana Card Front Photo *
-                </label>
-                <input
-                  id="co-card-front"
-                  type="file"
-                  accept="image/*"
-                  required
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFileRead(f, setGhanaCardFrontUrl, true);
-                  }}
-                  className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-none file:border file:border-border file:bg-white file:text-xs file:font-semibold file:text-foreground hover:file:bg-accent cursor-pointer"
-                />
-                {ghanaCardFrontUrl && (
-                  <div className="mt-2 text-[10px] text-green-600 font-semibold flex items-center gap-1">
-                    ✓ Front card photo attached
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="co-card-back" className={labelCls}>
-                  Ghana Card Back Photo *
-                </label>
-                <input
-                  id="co-card-back"
-                  type="file"
-                  accept="image/*"
-                  required
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFileRead(f, setGhanaCardBackUrl);
-                  }}
-                  className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-none file:border file:border-border file:bg-white file:text-xs file:font-semibold file:text-foreground hover:file:bg-accent cursor-pointer"
-                />
-                {ghanaCardBackUrl && (
-                  <div className="mt-2 text-[10px] text-green-600 font-semibold flex items-center gap-1">
-                    ✓ Back card photo attached
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         )}
