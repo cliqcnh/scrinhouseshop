@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Heart, MapPin, ShieldCheck, User, Wallet } from "lucide-react";
+import { Package, Heart, MapPin, ShieldCheck, User, Wallet, CreditCard } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/actions/auth/customer";
 import { formatDate, formatPrice } from "@/utils/format";
-import { getCustomerOrders, getCustomerWarranties } from "@/actions/storefront/dashboard";
+import { getCustomerOrders, getCustomerWarranties, getCustomerInstallmentApplications } from "@/actions/storefront/dashboard";
 import { getWishlistProducts } from "@/actions/storefront/wishlist";
 import { getAddresses } from "@/actions/storefront/addresses";
 import { AddressManagerClient } from "@/components/account/address-manager-client";
@@ -29,7 +29,7 @@ export default async function AccountPage({ searchParams }: Props) {
   const { welcome, tab = "orders" } = await searchParams;
 
   // Parallel loading of all dashboard data
-  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails] = await Promise.all([
+  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, phone, created_at, referral_code")
@@ -41,11 +41,13 @@ export default async function AccountPage({ searchParams }: Props) {
     getAddresses(),
     getCustomerWarranties(),
     getWalletDetails().catch(() => ({ balance: 0, referralCode: null, transactions: [], withdrawals: [] })),
+    getCustomerInstallmentApplications(),
   ]);
 
   // Tab links
   const tabs = [
     { id: "orders", label: "Orders", icon: Package, count: orders.length },
+    { id: "installments", label: "Installment Plans", icon: CreditCard, count: installments.length },
     { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistProducts.length },
     { id: "wallet", label: "Referrals & Wallet", icon: Wallet, count: 0 },
     { id: "addresses", label: "Addresses", icon: MapPin, count: addresses.length },
@@ -200,6 +202,86 @@ export default async function AccountPage({ searchParams }: Props) {
                   {wishlistProducts.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: INSTALLMENTS */}
+          {tab === "installments" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Installment Plans</h2>
+              {installments.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border bg-background">
+                  <CreditCard className="size-9 text-muted-foreground/30" strokeWidth={1} />
+                  <p className="text-sm text-muted-foreground">You don&apos;t have any active hire-purchase agreements.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto border border-border bg-background rounded">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/20">
+                        <th className="px-4 py-3">Product Name</th>
+                        <th className="px-4 py-3">Total Value</th>
+                        <th className="px-4 py-3">Down Payment</th>
+                        <th className="px-4 py-3">Remaining Balance</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {installments.map((inst) => {
+                        return (
+                          <tr key={inst.id} className="hover:bg-muted/30">
+                            <td className="px-4 py-3.5 font-medium text-foreground">
+                              {inst.productName}
+                              <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                Order: #{inst.orderId.slice(0, 8).toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-foreground font-semibold">
+                              {formatPrice(inst.totalPrice)}
+                            </td>
+                            <td className="px-4 py-3.5 text-muted-foreground">
+                              {formatPrice(inst.depositAmount)}
+                            </td>
+                            <td className="px-4 py-3.5 text-muted-foreground font-medium">
+                              {formatPrice(inst.remainingBalance)}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                inst.status === "approved"
+                                  ? "bg-green-500/10 text-green-700"
+                                  : inst.status === "rejected"
+                                  ? "bg-red-500/10 text-red-700"
+                                  : "bg-yellow-500/10 text-yellow-700"
+                              }`}>
+                                {inst.status.replace(/_/g, " ")}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-right">
+                              {inst.status === "approved" && inst.orderStatus === "pending_payment" ? (
+                                <Link
+                                  href={`/order/${inst.orderId}`}
+                                  className="inline-flex items-center justify-center border border-foreground bg-foreground text-background px-3 py-1.5 text-xs font-semibold hover:bg-foreground/90 uppercase tracking-wider transition-colors rounded-none"
+                                >
+                                  Pay Deposit
+                                </Link>
+                              ) : inst.status === "approved" && inst.orderStatus === "paid" ? (
+                                <span className="text-xs text-green-600 font-semibold flex items-center justify-end gap-1">
+                                  ✓ Deposit Paid
+                                </span>
+                              ) : inst.status === "approved" ? (
+                                <span className="text-xs text-muted-foreground">Active Plan</span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

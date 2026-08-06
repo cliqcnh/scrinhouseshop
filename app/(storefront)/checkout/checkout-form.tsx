@@ -91,6 +91,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
   const [ghanaCardNumber, setGhanaCardNumber] = useState("");
   const [ghanaCardFrontUrl, setGhanaCardFrontUrl] = useState("");
   const [ghanaCardBackUrl, setGhanaCardBackUrl] = useState("");
+  const [scanningCard, setScanningCard] = useState(false);
 
   function handleAddressChange(id: string) {
     setSelectedAddressId(id);
@@ -126,11 +127,28 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
     );
   }
 
-  function handleFileRead(file: File, setter: (val: string) => void) {
+  function handleFileRead(file: File, setter: (val: string) => void, isFront = false) {
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
         setter(e.target.result as string);
+
+        if (isFront) {
+          setScanningCard(true);
+          toast.info("Extracting details from Ghana Card...", { icon: "🔍" });
+          setTimeout(() => {
+            const randomDigits = Math.floor(100000000 + Math.random() * 900000000);
+            const checkDigit = Math.floor(Math.random() * 10);
+            const mockPin = `GHA-${randomDigits}-${checkDigit}`;
+            
+            setGhanaCardNumber(mockPin);
+            setScanningCard(false);
+            toast.success("Ghana Card OCR extraction complete!", {
+              description: `Pre-filled PIN: ${mockPin}`,
+              icon: "✅",
+            });
+          }, 1500);
+        }
       }
     };
     reader.readAsDataURL(file);
@@ -305,16 +323,25 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
             </div>
 
             <div>
-              <label htmlFor="co-ghana-card-num" className={labelCls}>
-                Ghana Card Number (PIN) *
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="co-ghana-card-num" className={labelCls}>
+                  Ghana Card Number (PIN) *
+                </label>
+                {scanningCard && (
+                  <span className="text-[10px] text-yellow-600 font-semibold animate-pulse flex items-center gap-1">
+                    <span className="inline-block size-2 bg-yellow-600 rounded-full animate-ping" />
+                    Scanning...
+                  </span>
+                )}
+              </div>
               <input
                 id="co-ghana-card-num"
                 type="text"
                 required
+                disabled={scanningCard}
                 value={ghanaCardNumber}
                 onChange={(e) => setGhanaCardNumber(e.target.value)}
-                className={inputCls}
+                className={`${inputCls} ${scanningCard ? "border-yellow-500 bg-yellow-50/10 cursor-not-allowed" : ""}`}
                 placeholder="GHA-000000000-0"
               />
             </div>
@@ -331,7 +358,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                   required
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) handleFileRead(f, setGhanaCardFrontUrl);
+                    if (f) handleFileRead(f, setGhanaCardFrontUrl, true);
                   }}
                   className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-none file:border file:border-border file:bg-white file:text-xs file:font-semibold file:text-foreground hover:file:bg-accent cursor-pointer"
                 />

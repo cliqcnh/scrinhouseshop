@@ -18,6 +18,9 @@ export interface FinancialSummary {
   totalRepairs: number;
   totalWalletTransactions: number;
   totalPayouts: number;
+  totalLockedInstallments: number;
+  totalCollectedInstallments: number;
+  totalCashSales: number;
   events: AuditEvent[];
 }
 
@@ -32,7 +35,7 @@ export async function getFinancialAuditData(filters: {
   // 1. Fetch Orders (inflow: paid, processing, shipped, delivered; outflow: refunded)
   let ordersQuery = supabase
     .from("orders")
-    .select("id, created_at, total, status, delivery_address, wallet_amount_applied")
+    .select("id, created_at, total, status, delivery_address, wallet_amount_applied, is_installment, installment_deposit, installment_balance")
     .order("created_at", { ascending: false });
 
   if (filters.startDate) ordersQuery = ordersQuery.gte("created_at", filters.startDate);
@@ -180,11 +183,29 @@ export async function getFinancialAuditData(filters: {
     if (e.category === "payout") totalPayouts += e.amount;
   }
 
+  let totalLockedInstallments = 0;
+  let totalCollectedInstallments = 0;
+  let totalCashSales = 0;
+
+  for (const o of orders ?? []) {
+    if (["paid", "processing", "shipped", "delivered"].includes(o.status)) {
+      if (o.is_installment) {
+        totalCollectedInstallments += Number(o.installment_deposit || 0);
+        totalLockedInstallments += Number(o.installment_balance || 0);
+      } else {
+        totalCashSales += Number(o.total || 0);
+      }
+    }
+  }
+
   return {
     totalSales,
     totalRepairs,
     totalWalletTransactions,
     totalPayouts,
+    totalLockedInstallments,
+    totalCollectedInstallments,
+    totalCashSales,
     events: filteredEvents,
   };
 }

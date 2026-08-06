@@ -4,6 +4,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffUser } from "@/lib/supabase/admin-guard";
+import { sendSMS } from "@/lib/notifications";
 
 export interface InstallmentApplicationRow {
   id: string;
@@ -134,12 +135,49 @@ export async function updateInstallmentStatus(
   await requireStaffUser();
   const supabase = await createClient();
 
+  const { data: appRow } = await (supabase
+    .from("installment_applications") as any)
+    .select(`
+      deposit_amount,
+      orders:order_id (
+        id,
+        delivery_address
+      )
+    `)
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await (supabase.from("installment_applications") as any)
     .update({ status, notes: notes ?? null, updated_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  // Trigger customer alert
+  if (appRow) {
+    const address = appRow.orders?.delivery_address as any ?? {};
+    const fullName = address.fullName || "Customer";
+    const phone = address.phone;
+    const orderId = appRow.orders?.id;
+    const shortOrderId = orderId ? orderId.slice(0, 8).toUpperCase() : "";
+    const deposit = Number(appRow.deposit_amount || 0).toFixed(2);
+    const orderLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/order/${orderId}`;
+
+    if (phone) {
+      if (status === "approved") {
+        sendSMS(
+          phone,
+          `Hi ${fullName}, your ScrinHouse installment application for order #${shortOrderId} has been approved! Complete your down payment of GH₵${deposit} here: ${orderLink}`
+        );
+      } else if (status === "rejected") {
+        sendSMS(
+          phone,
+          `Hi ${fullName}, your ScrinHouse installment application for order #${shortOrderId} was not approved. Notes: ${notes ?? "No reasons specified."} Check details: ${orderLink}`
+        );
+      }
+    }
   }
 
   revalidatePath("/admin/installments");

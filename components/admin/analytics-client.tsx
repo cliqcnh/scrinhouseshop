@@ -21,6 +21,9 @@ export default function AnalyticsClient() {
     totalRepairs: 0,
     totalWalletTransactions: 0,
     totalPayouts: 0,
+    totalLockedInstallments: 0,
+    totalCollectedInstallments: 0,
+    totalCashSales: 0,
     events: [],
   });
 
@@ -152,6 +155,101 @@ export default function AnalyticsClient() {
             {formatPrice(data.totalPayouts)}
           </span>
           <p className="text-xs text-muted-foreground">Approved cash-out requests</p>
+        </div>
+      </div>
+
+      {/* Hire Purchase / Installments Financial Ledger Overview */}
+      <div className="grid gap-6 sm:grid-cols-3">
+        {/* Cash Sales */}
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+            <span>Cash Sales (Direct)</span>
+            <DollarSign className="size-4 text-green-600" />
+          </div>
+          <span className="text-2xl font-bold tracking-tight text-foreground">
+            {formatPrice(data.totalCashSales)}
+          </span>
+          <p className="text-xs text-muted-foreground">Revenue paid in full at checkout</p>
+        </div>
+
+        {/* Collected Deposits */}
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+            <span>Installment Deposits</span>
+            <DollarSign className="size-4 text-yellow-600" />
+          </div>
+          <span className="text-2xl font-bold tracking-tight text-foreground">
+            {formatPrice(data.totalCollectedInstallments)}
+          </span>
+          <p className="text-xs text-muted-foreground">Collected hire-purchase down payments</p>
+        </div>
+
+        {/* Locked Balances */}
+        <div className="rounded-xl border border-border bg-card p-6 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+            <span>Locked Receivables</span>
+            <DollarSign className="size-4 text-muted-foreground" />
+          </div>
+          <span className="text-2xl font-bold tracking-tight text-foreground">
+            {formatPrice(data.totalLockedInstallments)}
+          </span>
+          <p className="text-xs text-muted-foreground">Pending installment balances to collect</p>
+        </div>
+      </div>
+
+      {/* Installment Breakdown Visual Progress Chart */}
+      <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+        <div>
+          <h3 className="font-heading text-lg font-bold text-foreground">Revenue Distribution & Receivables</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Visual split between direct cash sales, collected hire-purchase deposits, and future locked installment balances</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="h-6 w-full flex bg-muted rounded-none overflow-hidden">
+            {(() => {
+              const totalRev = (data.totalCashSales ?? 0) + (data.totalCollectedInstallments ?? 0) + (data.totalLockedInstallments ?? 0);
+              if (totalRev === 0) {
+                return (
+                  <div className="w-full flex items-center justify-center text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                    No Order Data Available
+                  </div>
+                );
+              }
+
+              const cashPct = ((data.totalCashSales ?? 0) / totalRev) * 100;
+              const depositPct = ((data.totalCollectedInstallments ?? 0) / totalRev) * 100;
+              const lockedPct = ((data.totalLockedInstallments ?? 0) / totalRev) * 100;
+
+              return (
+                <>
+                  {data.totalCashSales > 0 && (
+                    <div style={{ width: `${cashPct}%` }} className="bg-foreground h-full transition-all duration-500" title={`Cash Sales: ${cashPct.toFixed(1)}%`} />
+                  )}
+                  {data.totalCollectedInstallments > 0 && (
+                    <div style={{ width: `${depositPct}%` }} className="bg-yellow-600 h-full transition-all duration-500" title={`Collected Deposits: ${depositPct.toFixed(1)}%`} />
+                  )}
+                  {data.totalLockedInstallments > 0 && (
+                    <div style={{ width: `${lockedPct}%` }} className="bg-muted-foreground h-full transition-all duration-500" title={`Locked Balance: ${lockedPct.toFixed(1)}%`} />
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+          <div className="flex flex-wrap gap-6 text-xs justify-start">
+            <div className="flex items-center gap-2">
+              <div className="size-3 bg-foreground rounded-none" />
+              <span className="font-semibold text-foreground">Cash Sales ({formatPrice(data.totalCashSales ?? 0)})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="size-3 bg-yellow-600 rounded-none" />
+              <span className="font-semibold text-foreground">Installment Deposits ({formatPrice(data.totalCollectedInstallments ?? 0)})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="size-3 bg-muted-foreground rounded-none" />
+              <span className="font-semibold text-foreground">Locked Receivables ({formatPrice(data.totalLockedInstallments ?? 0)})</span>
+            </div>
+          </div>
         </div>
       </div>
 

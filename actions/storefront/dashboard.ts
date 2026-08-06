@@ -199,3 +199,57 @@ export async function lookupWarranty(imeiSerial: string): Promise<{ success: boo
     },
   };
 }
+
+export interface CustomerInstallmentApplication {
+  id: string;
+  orderId: string;
+  productName: string;
+  basePrice: number;
+  totalPrice: number;
+  depositAmount: number;
+  remainingBalance: number;
+  status: string;
+  createdAt: string;
+  orderStatus: string;
+}
+
+export async function getCustomerInstallmentApplications(): Promise<CustomerInstallmentApplication[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await (supabase
+    .from("installment_applications") as any)
+    .select(`
+      id,
+      order_id,
+      base_price,
+      total_price,
+      deposit_amount,
+      remaining_balance,
+      status,
+      created_at,
+      products ( name ),
+      orders:order_id ( status )
+    `)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error loading customer installments:", error?.message);
+    return [];
+  }
+
+  return (data as any[]).map((row: any) => ({
+    id: row.id,
+    orderId: row.order_id,
+    productName: row.products?.name ?? "Unknown Product",
+    basePrice: Number(row.base_price),
+    totalPrice: Number(row.total_price),
+    depositAmount: Number(row.deposit_amount),
+    remainingBalance: Number(row.remaining_balance),
+    status: row.status,
+    createdAt: row.created_at,
+    orderStatus: row.orders?.status ?? "pending_payment",
+  }));
+}
