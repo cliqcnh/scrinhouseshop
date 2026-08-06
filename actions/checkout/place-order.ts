@@ -275,6 +275,11 @@ export async function placeOrder(
       `Hello ${address.fullName}, your ScrinHouse order has been received! Total: ${formattedTotal}. Ref: ${paystackRef}. Track here: ${trackingLink}`
     );
 
+    sendSMS(
+      "0559257401",
+      `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} placed by ${address.fullName} (${address.phone}). Total: ${formattedTotal}. Type: ${hasInstallment ? "Installment" : "Regular"}`
+    );
+
     sendEmail(
       user.email,
       `Order Received - ScrinHouse`,
