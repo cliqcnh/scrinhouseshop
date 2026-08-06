@@ -40,7 +40,7 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
   }
 
   try {
-    console.log(`[SMS DEBUG] Gateway initialized. Username: "${wigalUsername}", API-Key length: ${wigalApiKey?.length ?? 0}, Key preview: ${wigalApiKey ? wigalApiKey.slice(0, 6) + '...' + wigalApiKey.slice(-4) : 'none'}`);
+    console.log(`[SMS DEBUG] Gateway initialized. Username: "${wigalUsername}", SenderId: "${senderId}" (length: ${senderId.length}), API-Key length: ${wigalApiKey?.length ?? 0}, Key preview: ${wigalApiKey ? wigalApiKey.slice(0, 6) + '...' + wigalApiKey.slice(-4) : 'none'}`);
     // 1. Wigal Frog Gateway Integration (Ghana)
     if (wigalApiKey || (wigalUsername && wigalPassword)) {
       const endpoint = process.env.WIGAL_SMS_URL || "https://frogapi.wigal.com.gh/api/v3/sms/send";
