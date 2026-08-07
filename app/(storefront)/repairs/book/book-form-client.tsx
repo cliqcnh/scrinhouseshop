@@ -21,17 +21,7 @@ const SERVICE_TYPES = [
   "Other Repair"
 ];
 
-const PREDEFINED_MODELS = [
-  "iPhone 15 Pro Max",
-  "iPhone 15 Pro",
-  "iPhone 14 Pro Max",
-  "iPhone 14 Pro",
-  "iPhone 13 Pro Max",
-  "iPhone 13",
-  "iPhone 12",
-  "iPhone 11",
-  "Other Model"
-];
+
 
 const DIAGNOSTIC_FEE = 150;
 
@@ -48,8 +38,30 @@ export function BookRepairFormClient({ estimates, defaultName, defaultPhone, def
   const [loading, setLoading] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
 
+  // Resolve unique models from estimates or fallback
+  const models = useMemo(() => {
+    const unique = Array.from(new Set(estimates.map((e) => e.deviceModel).filter(Boolean)));
+    if (unique.length > 0) {
+      return [...unique, "Other Model"];
+    }
+    return [
+      "iPhone 15 Pro Max",
+      "iPhone 15 Pro",
+      "iPhone 14 Pro Max",
+      "iPhone 14 Pro",
+      "iPhone 13 Pro Max",
+      "iPhone 13",
+      "iPhone 12",
+      "iPhone 11",
+      "Other Model"
+    ];
+  }, [estimates]);
+
   // Step 1: Device & Service
-  const [deviceModel, setDeviceModel] = useState(PREDEFINED_MODELS[0]);
+  const [deviceModel, setDeviceModel] = useState(() => {
+    const unique = Array.from(new Set(estimates.map((e) => e.deviceModel).filter(Boolean)));
+    return unique[0] || "Other Model";
+  });
   const [customDeviceModel, setCustomDeviceModel] = useState("");
   const [serviceType, setServiceType] = useState(SERVICE_TYPES[0]);
   const [customServiceType, setCustomServiceType] = useState("");
@@ -232,7 +244,7 @@ export function BookRepairFormClient({ estimates, defaultName, defaultPhone, def
                   value={deviceModel}
                   onChange={(e) => setDeviceModel(e.target.value)}
                 >
-                  {PREDEFINED_MODELS.map((m) => (
+                  {models.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
