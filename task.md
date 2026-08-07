@@ -7,7 +7,13 @@
 - [x] `actions/checkout/place-order.ts` — Query `product_variants.price` server-side and calculate order subtotal from database prices.
 
 ## 3. Authentication & Redirect Security
-- [x] `actions/auth/customer.ts` — Validate `next` parameter in `signIn()` to ensure same-origin relative path.
+- [x] Add updateProfilePhone action in customer.ts
+- [x] Remove email/password fields from login-form.tsx
+- [x] Remove email/password/name fields from register-form.tsx
+- [x] Implement phone prompt page in auth/phone/page.tsx
+- [x] Update auth/callback/route.ts to check and redirect when phone is missing
+- [x] Compile and verify all unit tests pass
+- [x] Create walkthrough.md summary with code changes
 
 ## 4. Admin Actions Defense-in-Depth Staff Guards
 - [x] `actions/admin/orders.ts` — Add `await requireStaffUser()`.

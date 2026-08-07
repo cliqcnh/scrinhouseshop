@@ -79,29 +79,26 @@ export async function signInWithGoogle(next?: string): Promise<{ error: string |
   const proto = headerList.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
   const currentOrigin = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
 
-  const supabase = await createClient();
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return { error: "Google OAuth Client ID is not configured in environment variables (GOOGLE_CLIENT_ID)." };
+  }
+
   const rawNext = next ?? "/account";
   const sanitizedNext = (rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes(":"))
     ? rawNext
     : "/account";
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${currentOrigin}/auth/callback?next=${encodeURIComponent(sanitizedNext)}`,
-    },
-  });
+  const state = encodeURIComponent(JSON.stringify({ next: sanitizedNext }));
+  const redirectUri = `${currentOrigin}/auth/callback`;
 
-  if (error) {
-    if (error.message.includes("not enabled") || error.status === 400) {
-      return { error: "Google Sign-In is currently disabled in your Supabase Dashboard under Authentication -> Providers -> Google." };
-    }
-    return { error: error.message };
-  }
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+    clientId
+  )}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(
+    "openid email profile"
+  )}&state=${state}`;
 
-  if (data.url) {
-    redirect(data.url);
-  }
+  redirect(authUrl);
 
   return { error: null };
 }
