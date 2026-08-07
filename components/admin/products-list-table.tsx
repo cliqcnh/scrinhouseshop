@@ -80,7 +80,7 @@ export function ProductsListTable({ initialProducts }: ProductsListTableProps) {
               onClick={() => handleBulkAction("active")}
               className="gap-1.5 text-xs"
             >
-              <Eye className="size-3.5" /> Mark Active
+              <Eye className="size-3.5" /> Enable (Show on Store)
             </Button>
             <Button
               variant="outline"
@@ -89,7 +89,7 @@ export function ProductsListTable({ initialProducts }: ProductsListTableProps) {
               onClick={() => handleBulkAction("inactive")}
               className="gap-1.5 text-xs"
             >
-              <EyeOff className="size-3.5" /> Mark Draft
+              <EyeOff className="size-3.5" /> Disable (Hide from Store)
             </Button>
             <Button
               variant="outline"
@@ -204,7 +204,7 @@ export function ProductsListTable({ initialProducts }: ProductsListTableProps) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <Badge variant={product.isActive ? "default" : "secondary"}>
-                        {product.isActive ? "Active" : "Draft"}
+                        {product.isActive ? "Active (Visible)" : "Disabled (Hidden)"}
                       </Badge>
                       {product.isFeatured && (
                         <Badge variant="outline" className="border-yellow-500/20 bg-yellow-500/5 text-yellow-700 dark:text-yellow-500">
