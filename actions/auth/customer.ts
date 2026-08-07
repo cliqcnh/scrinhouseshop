@@ -105,3 +105,29 @@ export async function signInWithGoogle(next?: string): Promise<{ error: string |
 
   return { error: null };
 }
+
+// ─── Update Profile Phone ────────────────────────────────────────────────────
+
+export async function updateProfilePhone(phone: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  // Format and validate phone format
+  const cleaned = phone.replace(/[^0-9+]/g, "").trim();
+  if (cleaned.length < 9) {
+    return { success: false, error: "Phone number is too short (minimum 9 digits)." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ phone: cleaned })
+    .eq("id", user.id);
+
+  if (error) {
+    console.error("Failed to update profile phone:", error.message);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}

@@ -1,14 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { signIn, signInWithGoogle } from "@/actions/auth/customer";
+import { useState } from "react";
+import { signInWithGoogle } from "@/actions/auth/customer";
 
 interface Props {
   next?: string;
 }
 
 export function LoginForm({ next }: Props) {
-  const [state, action, pending] = useActionState(signIn, { error: null });
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
 
@@ -30,12 +29,18 @@ export function LoginForm({ next }: Props) {
 
   return (
     <div className="space-y-5">
+      {googleError && (
+        <p className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive animate-in fade-in duration-200">
+          {googleError}
+        </p>
+      )}
+
       {/* Google OAuth Button */}
       <button
         type="button"
-        disabled={pending || googleLoading}
+        disabled={googleLoading}
         onClick={handleGoogleSignIn}
-        className="w-full flex items-center justify-center gap-3 rounded border border-border bg-white py-2.5 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-3 rounded border border-border bg-white py-3 px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted/50 disabled:opacity-50 shadow-sm"
       >
         <svg className="size-4 shrink-0" viewBox="0 0 24 24">
           <path
@@ -57,63 +62,6 @@ export function LoginForm({ next }: Props) {
         </svg>
         <span>{googleLoading ? "Connecting to Google…" : "Continue with Google"}</span>
       </button>
-
-      {/* Divider */}
-      <div className="relative flex items-center justify-center">
-        <div className="w-full border-t border-border" />
-        <span className="bg-background px-3 text-xs uppercase font-medium text-muted-foreground absolute">
-          or sign in with email
-        </span>
-      </div>
-
-      <form action={action} className="space-y-4 pt-2">
-        {/* Hidden redirect target */}
-        {next && <input type="hidden" name="next" value={next} />}
-
-        {(state.error || googleError) && (
-          <p className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {state.error || googleError}
-          </p>
-        )}
-
-        <div>
-          <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-foreground">
-            Email address
-          </label>
-          <input
-            id="login-email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="w-full rounded border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="you@example.com"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="login-password" className="mb-1.5 block text-sm font-medium text-foreground">
-            Password
-          </label>
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            className="w-full rounded border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="••••••••"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={pending || googleLoading}
-          className="w-full rounded bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-80 disabled:opacity-50"
-        >
-          {pending ? "Signing in…" : "Sign in with Email"}
-        </button>
-      </form>
     </div>
   );
 }

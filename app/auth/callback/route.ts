@@ -14,6 +14,21 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Check if user has phone number configured in their profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile?.phone) {
+          return NextResponse.redirect(
+            `${origin}/auth/phone?next=${encodeURIComponent(next)}`
+          );
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
