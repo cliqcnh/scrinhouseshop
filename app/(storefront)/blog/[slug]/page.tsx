@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Calendar, ChevronLeft, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/utils/format";
+import DOMPurify from "isomorphic-dompurify";
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -90,7 +91,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       {/* Main post body */}
       <div 
         className="mt-10 prose max-w-none text-foreground prose-headings:font-heading prose-headings:font-bold prose-headings:text-foreground prose-p:leading-relaxed prose-a:text-[#1d4ed8] prose-a:hover:underline"
-        dangerouslySetInnerHTML={{ __html: post.content }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
       />
     </article>
   );

@@ -78,39 +78,77 @@ export async function listCustomerEnquiries(sessionToken: string) {
 
     const adminSupabase = createServiceRoleClient();
     
-    // Build filter: logged-in user or guest session token
-    let query = adminSupabase
-      .from("product_enquiries")
-      .select(`
+    const SELECT_FIELDS = `
+      id,
+      product_id,
+      customer_name,
+      customer_email,
+      customer_phone,
+      status,
+      created_at,
+      user_id,
+      session_token,
+      products (
         id,
-        product_id,
-        customer_name,
-        customer_email,
-        customer_phone,
-        status,
-        created_at,
-        user_id,
-        session_token,
-        products (
-          id,
-          name,
-          slug,
-          product_images ( url, is_primary )
-        )
-      `);
+        name,
+        slug,
+        product_images ( url, is_primary )
+      )
+    `;
+
+    let data: any[] = [];
 
     if (user?.id) {
-      // If user is logged in, show both their account threads and session token threads
-      query = query.or(`user_id.eq.${user.id},session_token.eq.${sessionToken}`);
+      const { data: d1, error: err1 } = await adminSupabase
+        .from("product_enquiries")
+        .select(SELECT_FIELDS)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (err1) {
+        console.error("Failed to load customer enquiries (q1):", err1.message);
+        return [];
+      }
+
+      if (sessionToken && typeof sessionToken === "string") {
+        const { data: d2, error: err2 } = await adminSupabase
+          .from("product_enquiries")
+          .select(SELECT_FIELDS)
+          .eq("session_token", sessionToken)
+          .order("created_at", { ascending: false });
+
+        if (err2) {
+          console.error("Failed to load customer enquiries (q2):", err2.message);
+          return [];
+        }
+
+        const merged = [...(d1 ?? []), ...(d2 ?? [])];
+        const seen = new Set();
+        data = merged.filter((item: any) => {
+          if (seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        });
+
+        // Ensure proper descending date sort after merge
+        data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      } else {
+        data = d1 ?? [];
+      }
     } else {
-      query = query.eq("session_token", sessionToken);
-    }
+      if (sessionToken && typeof sessionToken === "string") {
+        const { data: d, error: err } = await adminSupabase
+          .from("product_enquiries")
+          .select(SELECT_FIELDS)
+          .eq("session_token", sessionToken)
+          .order("created_at", { ascending: false });
 
-    const { data, error } = await query.order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Failed to load customer enquiries:", error.message);
-      return [];
+        if (err) {
+          console.error("Failed to load customer enquiries (q3):", err.message);
+          return [];
+        }
+        data = d ?? [];
+      }
     }
 
     return (data ?? []).map((row: any) => {

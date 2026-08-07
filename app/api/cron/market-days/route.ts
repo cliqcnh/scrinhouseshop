@@ -4,10 +4,15 @@ import { processEndedAuctionsInternal } from "@/actions/storefront/market-days";
 export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
-  // Simple auth security check
+  // Secure cron authorization (fail-closed)
   const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("Cron error: CRON_SECRET is not set in environment variables.");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const authHeader = req.headers.get("Authorization");
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
