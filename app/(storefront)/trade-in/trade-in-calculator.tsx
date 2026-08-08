@@ -150,7 +150,7 @@ export function TradeInCalculator() {
 
         <div>
           <label className={labelCls}>3. Storage Capacity</label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {["64GB", "128GB", "256GB", "512GB"].map((st) => (
               <button
                 key={st}
@@ -166,7 +166,7 @@ export function TradeInCalculator() {
 
         <div>
           <label className={labelCls}>4. Display &amp; Screen Condition</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { id: "flawless", label: "Flawless", sub: "No scratches" },
               { id: "scratched", label: "Minor Scratches", sub: "Light surface marks" },
@@ -187,7 +187,7 @@ export function TradeInCalculator() {
 
         <div>
           <label className={labelCls}>5. Body Condition</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { id: "clean", label: "Clean / Like New" },
               { id: "light_wear", label: "Light Wear / Scuffs" },
@@ -207,7 +207,7 @@ export function TradeInCalculator() {
 
         <div>
           <label className={labelCls}>6. Battery Health</label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { id: "good", label: "Good Health (>80%)" },
               { id: "below_80", label: "Degraded (<80% or Service)" },
