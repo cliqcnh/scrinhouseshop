@@ -7,6 +7,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/server";
 import { listTopLevelCategories } from "@/services/catalog-service";
@@ -56,32 +57,44 @@ export async function Header() {
             </SheetHeader>
             <nav className="flex flex-col gap-1 px-4 mt-4">
               {categories.map((category) => (
-                <Link
+                <SheetClose
                   key={category.id}
-                  href={`/category/${category.slug}`}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  render={
+                    <Link
+                      href={`/category/${category.slug}`}
+                      className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                    />
+                  }
                 >
                   {category.name}
-                </Link>
+                </SheetClose>
               ))}
               <div className="my-2 h-px bg-border" />
               {STATIC_LINKS.map((link) => (
-                <Link
+                <SheetClose
                   key={link.href}
-                  href={link.href}
-                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  render={
+                    <Link
+                      href={link.href}
+                      className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                    />
+                  }
                 >
                   {link.label}
-                </Link>
+                </SheetClose>
               ))}
               <div className="my-2 h-px bg-border" />
-              <Link
-                href="/account"
-                className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+              <SheetClose
+                render={
+                  <Link
+                    href="/account"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  />
+                }
               >
                 <User className="size-4" />
                 {displayName ? `Hi, ${displayName}` : "Account / Login"}
-              </Link>
+              </SheetClose>
             </nav>
           </SheetContent>
         </Sheet>
