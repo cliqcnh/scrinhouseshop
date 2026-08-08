@@ -189,3 +189,43 @@ export async function bulkUpdateProducts(
   revalidateTag("products");
   return { success: true };
 }
+
+// ─── Quick Price Update ──────────────────────────────────────────────────────
+
+export async function updateProductPriceQuick(productId: string, basePrice: number): Promise<ActionResult> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error: prodError } = await supabase
+    .from("products")
+    .update({ base_price: basePrice })
+    .eq("id", productId);
+
+  if (prodError) return { success: false, error: prodError.message };
+
+  // Sync variant prices
+  const { data: variants } = await supabase
+    .from("product_variants")
+    .select("id")
+    .eq("product_id", productId);
+
+  if (variants && variants.length > 0) {
+    if (variants.length === 1) {
+      await supabase
+        .from("product_variants")
+        .update({ price: basePrice })
+        .eq("id", variants[0].id);
+    } else {
+      // If multiple variants exist, update all of them to the new base price
+      await supabase
+        .from("product_variants")
+        .update({ price: basePrice })
+        .eq("product_id", productId);
+    }
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${productId}`);
+  revalidateTag("products");
+  return { success: true };
+}

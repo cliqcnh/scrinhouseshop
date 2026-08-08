@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/utils/format";
-import { bulkUpdateProducts } from "@/actions/admin/products";
+import { bulkUpdateProducts, updateProductPriceQuick } from "@/actions/admin/products";
 import type { AdminProductRow } from "@/services/admin-service";
 
 interface ProductsListTableProps {
@@ -199,7 +199,13 @@ export function ProductsListTable({ initialProducts }: ProductsListTableProps) {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{product.categoryName ?? "—"}</td>
-                  <td className="px-4 py-3 text-foreground font-semibold">{formatPrice(product.basePrice)}</td>
+                  <td className="px-4 py-3">
+                    <InlinePriceEditor
+                      key={`${product.id}-${product.basePrice}`}
+                      productId={product.id}
+                      initialPrice={product.basePrice}
+                    />
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{product.totalStock}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
@@ -219,6 +225,58 @@ export function ProductsListTable({ initialProducts }: ProductsListTableProps) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ─── Inline Price Editor Component ───────────────────────────────────────────
+
+function InlinePriceEditor({ productId, initialPrice }: { productId: string; initialPrice: number }) {
+  const [price, setPrice] = useState(initialPrice.toString());
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    const val = parseFloat(price);
+    if (isNaN(val) || val < 0) {
+      toast.error("Please enter a valid price.");
+      setPrice(initialPrice.toString());
+      return;
+    }
+    if (val === initialPrice) return; // No changes
+
+    setSaving(false); // don't block user typing next fields
+    try {
+      const res = await updateProductPriceQuick(productId, val);
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to update price.");
+        setPrice(initialPrice.toString());
+      } else {
+        toast.success("Price updated successfully.");
+      }
+    } catch (err) {
+      toast.error("An error occurred while updating the price.");
+      setPrice(initialPrice.toString());
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs font-semibold text-muted-foreground">GH₵</span>
+      <input
+        type="number"
+        step="0.01"
+        min="0"
+        value={price}
+        disabled={saving}
+        onChange={(e) => setPrice(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
+        className="w-24 rounded border border-border bg-background px-2 py-1 text-sm font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+      />
     </div>
   );
 }
