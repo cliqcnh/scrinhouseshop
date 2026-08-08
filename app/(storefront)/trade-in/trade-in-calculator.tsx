@@ -114,7 +114,7 @@ export function TradeInCalculator() {
   return (
     <div className="grid gap-12 lg:grid-cols-12 lg:items-start">
       {/* Questionnaire Form */}
-      <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6 border border-border p-6 sm:p-8 bg-white">
+      <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6 border border-border p-4 sm:p-8 bg-white">
         <div>
           <label className={labelCls}>1. Select Brand</label>
           <div className="grid grid-cols-2 gap-3">
@@ -255,7 +255,7 @@ export function TradeInCalculator() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full rounded-none bg-foreground text-background hover:bg-foreground/90 text-xs font-bold uppercase tracking-wider gap-2 py-3 h-auto"
+            className="w-full rounded-none bg-foreground text-background hover:bg-foreground/90 text-xs font-bold uppercase tracking-wider gap-2 py-3 h-auto whitespace-normal"
           >
             {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
             Submit Device for Admin Trade-In Quote
@@ -264,8 +264,8 @@ export function TradeInCalculator() {
       </form>
 
       {/* Valuation Summary Card */}
-      <aside className="lg:col-span-5 sticky top-8 space-y-6">
-        <div className="border border-border p-6 bg-white space-y-6">
+      <aside className="lg:col-span-5 space-y-6">
+        <div className="border border-border p-4 sm:p-6 bg-white space-y-6">
           <div className="border-b border-border pb-4">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Admin Valuation Process</p>
             <div className="mt-2 flex items-baseline justify-between">
