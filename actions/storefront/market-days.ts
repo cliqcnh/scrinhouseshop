@@ -46,6 +46,7 @@ export interface MarketEventState {
     bidsCount: number;
     status: "active" | "ended" | "cancelled";
     buyNowPrice: number | null;
+    condition: string;
   }>;
 }
 
@@ -111,6 +112,7 @@ export async function getMarketState(): Promise<MarketEventState> {
           id,
           name,
           base_price,
+          condition,
           product_images ( url, is_primary )
         ),
         discount_rules (
@@ -201,6 +203,7 @@ export async function getMarketState(): Promise<MarketEventState> {
           bidsCount: bidsList.length,
           status: item.status as any,
           buyNowPrice: item.buy_now_price ? Number(item.buy_now_price) : null,
+          condition: p.condition ?? "new",
         });
       }
     }

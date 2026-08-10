@@ -24,6 +24,7 @@ interface AuctionItem {
   bidsCount: number;
   status: "active" | "ended" | "cancelled";
   buyNowPrice: number | null;
+  condition: string;
 }
 
 interface AuctionsFeedProps {
@@ -37,6 +38,7 @@ export function LiveAuctionsFeed({ initialAuctions, currentUser }: AuctionsFeedP
   const [bidAmount, setBidAmount] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timers, setTimers] = useState<Record<string, string>>({});
+  const [agreed, setAgreed] = useState(false);
 
   const supabase = createClient();
 
@@ -155,6 +157,7 @@ export function LiveAuctionsFeed({ initialAuctions, currentUser }: AuctionsFeedP
       toast.error("Please login to place a bid on this product.");
       return;
     }
+    setAgreed(false);
     setSelectedAuction(auc);
     const minBid = auc.currentHighestBid > 0 
       ? auc.currentHighestBid + auc.minIncrement 
@@ -165,6 +168,11 @@ export function LiveAuctionsFeed({ initialAuctions, currentUser }: AuctionsFeedP
   const handlePlaceBid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAuction || !currentUser) return;
+
+    if (!agreed) {
+      toast.error("You must agree to the bidding terms and product condition before placing a bid.");
+      return;
+    }
 
     const amount = Number(bidAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -187,6 +195,7 @@ export function LiveAuctionsFeed({ initialAuctions, currentUser }: AuctionsFeedP
       if (res.success) {
         toast.success("Congratulations! You are currently the highest bidder.");
         setSelectedAuction(null);
+        setAgreed(false);
       } else {
         toast.error(res.error ?? "Failed to place bid.");
       }
@@ -333,6 +342,20 @@ export function LiveAuctionsFeed({ initialAuctions, currentUser }: AuctionsFeedP
                     placeholder="Enter bid value"
                   />
                 </div>
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-start gap-2.5 text-xs text-muted-foreground select-none cursor-pointer leading-relaxed">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="mt-0.5 rounded border-border text-foreground focus:ring-foreground size-4 shrink-0 bg-background"
+                  />
+                  <span>
+                    I agree to the bidding terms {"&"} conditions, and confirm I have reviewed this item{"'"}s state (<strong>{selectedAuction.condition.toUpperCase()}</strong> condition).
+                  </span>
+                </label>
               </div>
 
               <div className="flex gap-3 pt-2">
