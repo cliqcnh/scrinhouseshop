@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import { Flame } from "lucide-react";
 import { getAdminMarketStats, getAdminEvents, getAvailableProducts } from "@/actions/admin/market-days";
 import { MarketDaysAdminClient } from "@/components/admin/market-days-client";
+import { listTopLevelCategories } from "@/services/catalog-service";
 
 export const metadata: Metadata = {
   title: "Market Days Management - Admin",
 };
 
 export default async function AdminMarketDaysPage() {
-  const [stats, events, products] = await Promise.all([
+  const [stats, events, products, categories] = await Promise.all([
     getAdminMarketStats(),
     getAdminEvents(),
     getAvailableProducts(),
+    listTopLevelCategories(),
   ]);
 
   return (
@@ -31,6 +33,7 @@ export default async function AdminMarketDaysPage() {
         initialStats={stats}
         initialEvents={events}
         availableProducts={products}
+        categories={categories}
       />
     </div>
   );

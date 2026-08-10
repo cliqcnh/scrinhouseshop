@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireStaffUser } from "@/lib/supabase/admin-guard";
 import { revalidatePath } from "next/cache";
+import type { ProductType, ProductCondition } from "@/types/database";
 
 export interface AdminEventRow {
   id: string;
@@ -321,4 +322,74 @@ export async function getAvailableProducts() {
 
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function createQuickProduct(data: {
+  name: string;
+  basePrice: number;
+  categoryId: string;
+  productType: ProductType;
+  imageUrl?: string;
+}): Promise<{ success: boolean; productId?: string; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const slug = data.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") + "-" + Math.random().toString(36).substring(2, 6);
+
+  const sku = `MD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+  const productPayload = {
+    name: data.name,
+    slug,
+    sku,
+    base_price: data.basePrice,
+    category_id: data.categoryId,
+    product_type: data.productType,
+    is_active: true,
+    is_featured: false,
+    allow_installments: false,
+    description: "Market Day Deal / Auction Item",
+    condition: "excellent" as ProductCondition,
+  };
+
+  const { data: inserted, error } = await supabase
+    .from("products")
+    .insert(productPayload)
+    .select("id")
+    .single();
+
+  if (error) return { success: false, error: error.message };
+
+  // Create default variant
+  const { error: variantError } = await supabase.from("product_variants").insert({
+    product_id: inserted.id,
+    sku,
+    price: data.basePrice,
+    stock_quantity: 100, // plenty of stock
+  });
+
+  if (variantError) {
+    // Rollback product insert
+    await supabase.from("products").delete().eq("id", inserted.id);
+    return { success: false, error: variantError.message };
+  }
+
+  // Create primary product image if URL is provided
+  if (data.imageUrl) {
+    await supabase.from("product_images").insert({
+      product_id: inserted.id,
+      url: data.imageUrl,
+      is_primary: true,
+      display_order: 0,
+    });
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/market-days");
+  revalidatePath("/market-days");
+
+  return { success: true, productId: inserted.id };
 }

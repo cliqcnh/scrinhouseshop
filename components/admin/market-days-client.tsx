@@ -7,9 +7,11 @@ import {
   getEventProducts,
   addEventProduct,
   deleteEventProduct,
+  createQuickProduct,
   type AdminEventRow,
   type AdminMarketStats,
 } from "@/actions/admin/market-days";
+import type { Category } from "@/types/catalog";
 import { formatPrice } from "@/utils/format";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -69,12 +71,14 @@ interface MarketDaysAdminClientProps {
   initialStats: AdminMarketStats;
   initialEvents: AdminEventRow[];
   availableProducts: Array<{ id: string; name: string; sku: string; base_price: number }>;
+  categories: Category[];
 }
 
 export function MarketDaysAdminClient({
   initialStats,
   initialEvents,
   availableProducts,
+  categories,
 }: MarketDaysAdminClientProps) {
   const [stats, setStats] = useState<AdminMarketStats>(initialStats);
   const [events, setEvents] = useState<AdminEventRow[]>(initialEvents);
@@ -118,6 +122,14 @@ export function MarketDaysAdminClient({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Quick upload states
+  const [isQuickUpload, setIsQuickUpload] = useState(false);
+  const [quickName, setQuickName] = useState("");
+  const [quickBasePrice, setQuickBasePrice] = useState(0);
+  const [quickCategoryId, setQuickCategoryId] = useState("");
+  const [quickProductType, setQuickProductType] = useState<"phone" | "accessory" | "repair_part">("phone");
+  const [quickImageUrl, setQuickImageUrl] = useState("");
+
   // Set default selected event
   useEffect(() => {
     if (events.length > 0 && !selectedEventId) {
@@ -132,7 +144,7 @@ export function MarketDaysAdminClient({
     }
   }, [selectedEventId]);
 
-  async function loadEventProducts(eventId: string) {
+  const loadEventProducts = async (eventId: string) => {
     setIsLoadingProducts(true);
     try {
       const data = await getEventProducts(eventId);
@@ -143,7 +155,7 @@ export function MarketDaysAdminClient({
     } finally {
       setIsLoadingProducts(false);
     }
-  }
+  };
 
   // Handle Event Submit
   const handleEventSubmit = async (e: React.FormEvent) => {
@@ -214,14 +226,54 @@ export function MarketDaysAdminClient({
       toast.error("Please select an event first.");
       return;
     }
-    if (!productForm.productId) {
-      toast.error("Please select a product.");
-      return;
-    }
+
+    let finalProductId = productForm.productId;
 
     setIsSubmitting(true);
     try {
-      const res = await addEventProduct(selectedEventId, productForm.productId, productForm.saleType, {
+      if (isQuickUpload) {
+        if (!quickName.trim()) {
+          toast.error("Please enter a product name.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (quickBasePrice <= 0) {
+          toast.error("Please enter a valid base price.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!quickCategoryId) {
+          toast.error("Please select a category.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // 1. Create the product
+        const createRes = await createQuickProduct({
+          name: quickName,
+          basePrice: quickBasePrice,
+          categoryId: quickCategoryId,
+          productType: quickProductType,
+          imageUrl: quickImageUrl || undefined,
+        });
+
+        if (!createRes.success || !createRes.productId) {
+          toast.error(createRes.error ?? "Failed to create product.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        finalProductId = createRes.productId;
+      } else {
+        if (!finalProductId) {
+          toast.error("Please select a product.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // 2. Allocate the product
+      const res = await addEventProduct(selectedEventId, finalProductId, productForm.saleType, {
         discountPercent: productForm.discountPercent,
         fixedPrice: productForm.fixedPrice > 0 ? productForm.fixedPrice : undefined,
         limitQuantity: productForm.limitQuantity,
@@ -240,6 +292,14 @@ export function MarketDaysAdminClient({
       if (res.success) {
         toast.success("Product successfully allocated to event.");
         setIsProductModalOpen(false);
+        // Reset states
+        setIsQuickUpload(false);
+        setQuickName("");
+        setQuickBasePrice(0);
+        setQuickCategoryId("");
+        setQuickProductType("phone");
+        setQuickImageUrl("");
+        // Reload products list
         loadEventProducts(selectedEventId);
       } else {
         toast.error(res.error ?? "Failed to allocate product.");
@@ -742,22 +802,106 @@ export function MarketDaysAdminClient({
             <h3 className="font-heading text-lg font-bold text-foreground mb-4">Allocate Product to Event</h3>
 
             <form onSubmit={handleProductSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs uppercase font-bold text-muted-foreground">Select Product</label>
-                <select
-                  required
-                  value={productForm.productId}
-                  onChange={(e) => setProductForm({ ...productForm, productId: e.target.value })}
-                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold"
-                >
-                  <option value="">-- Select a catalog item --</option>
-                  {availableProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku}) — GHS {p.base_price}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-2 py-2.5 bg-muted/20 px-3 border border-border rounded-lg mb-4">
+                <input
+                  type="checkbox"
+                  id="isQuickUpload"
+                  checked={isQuickUpload}
+                  onChange={(e) => setIsQuickUpload(e.target.checked)}
+                  className="rounded border-border"
+                />
+                <label htmlFor="isQuickUpload" className="text-xs uppercase font-bold text-foreground cursor-pointer select-none">
+                  Upload a new product directly for this deal
+                </label>
               </div>
+
+              {!isQuickUpload ? (
+                <div className="space-y-2 mb-4">
+                  <label className="text-xs uppercase font-bold text-muted-foreground">Select Product</label>
+                  <select
+                    required={!isQuickUpload}
+                    value={productForm.productId}
+                    onChange={(e) => setProductForm({ ...productForm, productId: e.target.value })}
+                    className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm font-semibold"
+                  >
+                    <option value="">-- Select a catalog item --</option>
+                    {availableProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.sku}) — GHS {p.base_price}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-4 border border-border p-4 bg-muted/10 rounded-lg mb-4">
+                  <h4 className="text-xs uppercase font-bold text-foreground border-b border-border pb-2">New Product Details</h4>
+                  
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase font-bold text-muted-foreground">Product Name *</label>
+                    <Input
+                      required={isQuickUpload}
+                      value={quickName}
+                      onChange={(e) => setQuickName(e.target.value)}
+                      placeholder="e.g. iPhone 15 Pro Max (Refurbished)"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-muted-foreground">Base Price (GHS) *</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        required={isQuickUpload}
+                        value={quickBasePrice || ""}
+                        onChange={(e) => setQuickBasePrice(Number(e.target.value))}
+                        placeholder="1200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-muted-foreground">Category *</label>
+                      <select
+                        required={isQuickUpload}
+                        value={quickCategoryId}
+                        onChange={(e) => setQuickCategoryId(e.target.value)}
+                        className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm font-semibold"
+                      >
+                        <option value="">-- Select Category --</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-muted-foreground">Product Type</label>
+                      <select
+                        value={quickProductType}
+                        onChange={(e) => setQuickProductType(e.target.value as "phone" | "accessory" | "repair_part")}
+                        className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm font-semibold"
+                      >
+                        <option value="phone">Phone / Device</option>
+                        <option value="repair_part">Repair Part</option>
+                        <option value="accessory">Accessory</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase font-bold text-muted-foreground">Image URL (Optional)</label>
+                      <Input
+                        value={quickImageUrl}
+                        onChange={(e) => setQuickImageUrl(e.target.value)}
+                        placeholder="https://example.com/phone.jpg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-xs uppercase font-bold text-muted-foreground">Sale Strategy Type</label>
