@@ -59,7 +59,7 @@ export async function getFinancialAuditData(filters: {
   // 3. Fetch Wallet Transactions
   let walletQuery = supabase
     .from("wallet_transactions")
-    .select("id, created_at, amount, type, description, profiles:profiles(display_name)")
+    .select("id, created_at, amount, type, description, profiles:profiles(full_name)")
     .order("created_at", { ascending: false });
 
   if (filters.startDate) walletQuery = walletQuery.gte("created_at", filters.startDate);
@@ -71,7 +71,7 @@ export async function getFinancialAuditData(filters: {
   // 4. Fetch Withdrawals (outflow: approved/paid)
   let withdrawalsQuery = supabase
     .from("withdrawal_requests")
-    .select("id, created_at, amount, status, payment_method, profiles:profiles(display_name)")
+    .select("id, created_at, amount, status, payment_method, profiles:profiles(full_name)")
     .order("created_at", { ascending: false });
 
   if (filters.startDate) withdrawalsQuery = withdrawalsQuery.gte("created_at", filters.startDate);
@@ -129,7 +129,7 @@ export async function getFinancialAuditData(filters: {
 
   // Map Wallet Transactions
   for (const w of walletTx ?? []) {
-    const userName = (w.profiles as any)?.display_name ?? "User";
+    const userName = (w.profiles as any)?.full_name ?? "User";
     const amt = Number(w.amount);
     events.push({
       id: w.id,
@@ -145,7 +145,7 @@ export async function getFinancialAuditData(filters: {
   // Map Withdrawals
   for (const p of withdrawals ?? []) {
     if (["approved", "paid"].includes(p.status)) {
-      const userName = (p.profiles as any)?.display_name ?? "User";
+      const userName = (p.profiles as any)?.full_name ?? "User";
       events.push({
         id: p.id,
         date: p.created_at,
