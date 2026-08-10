@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { requireStaffUser } from "@/lib/supabase/admin-guard";
 import { sendSMS, sendEmail } from "@/lib/notifications";
 
@@ -177,8 +177,9 @@ export async function updateOrderStatus(orderId: string, status: any): Promise<{
     }
 
     if (order.user_id) {
-      const { data: userData } = await supabase.auth.getUser();
-      const email = userData?.user?.email;
+      const adminSupabase = createServiceRoleClient();
+      const { data: customerData } = await adminSupabase.auth.admin.getUserById(order.user_id);
+      const email = customerData?.user?.email;
       if (email) {
         await sendEmail(
           email,

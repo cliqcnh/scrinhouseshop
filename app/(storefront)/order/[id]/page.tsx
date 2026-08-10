@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Truck, Package, XCircle, RotateCcw, Loader2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -112,6 +112,26 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   } else if (isMock) {
     displayTitle = "Order placed (test mode)";
     displayDescription = "No real payment was taken. Add a Paystack secret key to enable live payments.";
+  } else if (order.status === "processing") {
+    displayTitle = "Order Processing";
+    displayIcon = <Loader2 className="mx-auto mb-4 size-12 text-foreground animate-spin" strokeWidth={1.5} />;
+    displayDescription = "We're preparing your items. We'll send you an update when it ships.";
+  } else if (order.status === "shipped") {
+    displayTitle = "Order Shipped!";
+    displayIcon = <Truck className="mx-auto mb-4 size-12 text-foreground" strokeWidth={1.5} />;
+    displayDescription = "Your order is on its way. We'll send you an update when it arrives.";
+  } else if (order.status === "delivered") {
+    displayTitle = "Order Delivered!";
+    displayIcon = <Package className="mx-auto mb-4 size-12 text-foreground" strokeWidth={1.5} />;
+    displayDescription = "Your order has been successfully delivered. Thank you for shopping with ScrinHouse!";
+  } else if (order.status === "cancelled") {
+    displayTitle = "Order Cancelled";
+    displayIcon = <XCircle className="mx-auto mb-4 size-12 text-red-600" strokeWidth={1.5} />;
+    displayDescription = "This order has been cancelled.";
+  } else if (order.status === "refunded") {
+    displayTitle = "Order Refunded";
+    displayIcon = <RotateCcw className="mx-auto mb-4 size-12 text-yellow-600" strokeWidth={1.5} />;
+    displayDescription = "This order has been refunded.";
   }
 
   return (
