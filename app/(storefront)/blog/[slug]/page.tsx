@@ -4,9 +4,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calendar, ChevronLeft, User } from "lucide-react";
-import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/utils/format";
-import DOMPurify from "isomorphic-dompurify";
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -14,7 +13,7 @@ interface BlogPostPageProps {
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = createServiceRoleClient();
+  const supabase = await createClient();
 
   const { data: post } = await (supabase.from("posts") as any)
     .select("title, excerpt")
@@ -32,9 +31,9 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { slug } = await params;
-  const supabase = createServiceRoleClient();
+  const supabase = await createClient();
 
-  // Fetch post + join author details from profiles
+  // Fetch post + join author details from profiles (gracefully falls back to ScrinHouse if blocked by RLS)
   const { data: postData, error } = await (supabase.from("posts") as any)
     .select("*, author:profiles(full_name)")
     .eq("slug", slug)
@@ -69,12 +68,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               {formatDate(post.published_at)}
             </time>
           </div>
-          {post.author?.full_name && (
-            <div className="flex items-center gap-1.5">
-              <User className="size-4" />
-              <span>By {post.author.full_name}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5">
+            <User className="size-4" />
+            <span>By {post.author?.full_name ?? "ScrinHouse"}</span>
+          </div>
         </div>
       </header>
 
@@ -91,7 +88,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       {/* Main post body */}
       <div 
         className="mt-10 prose max-w-none text-foreground prose-headings:font-heading prose-headings:font-bold prose-headings:text-foreground prose-p:leading-relaxed prose-a:text-[#1d4ed8] prose-a:hover:underline"
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+        dangerouslySetInnerHTML={{ __html: post.content }}
       />
     </article>
   );
