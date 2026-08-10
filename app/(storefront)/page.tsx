@@ -26,7 +26,10 @@ export default async function HomePage({ searchParams }: Props) {
     getMarketState(),
   ]);
 
-  const activeCategory = (topLevelCategories as any[]).find((c: any) => c.slug === activeCategorySlug) || topLevelCategories[0];
+  const defaultCategory = (topLevelCategories as any[]).find((c: any) => c.slug === "repair-parts") || topLevelCategories[0];
+  const activeCategory = activeCategorySlug 
+    ? (topLevelCategories as any[]).find((c: any) => c.slug === activeCategorySlug) || defaultCategory
+    : defaultCategory;
   const activeCategoryId = activeCategory?.id;
 
   const featuredProducts = await getFeaturedProducts(8, activeCategoryId);
@@ -72,7 +75,7 @@ export default async function HomePage({ searchParams }: Props) {
             {(topLevelCategories as any[])
               .filter((c: any) => ["phones", "repair-parts", "accessories"].includes(c.slug))
               .sort((a: any, b: any) => {
-                const order = ["phones", "repair-parts", "accessories"];
+                const order = ["repair-parts", "phones", "accessories"];
                 return order.indexOf(a.slug) - order.indexOf(b.slug);
               })
               .slice(0, 3)
