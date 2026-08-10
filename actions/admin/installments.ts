@@ -257,3 +257,68 @@ export async function updateProductInstallmentConfig(
   revalidateTag("products");
   return { success: true };
 }
+
+// ─── Delivery Configuration ──────────────────────────────────────────────────
+
+export interface DeliveryConfig {
+  phones_accra: number;
+  phones_outside: number;
+  consoles_accra: number;
+  consoles_outside: number;
+  others_accra: number;
+  others_outside: number;
+}
+
+export async function getDeliveryConfig(): Promise<DeliveryConfig> {
+  const supabase = await createClient();
+
+  const { data } = await (supabase.from("store_settings") as any)
+    .select("value")
+    .eq("key", "delivery_config")
+    .maybeSingle();
+
+  if (!data) {
+    return {
+      phones_accra: 35,
+      phones_outside: 70,
+      consoles_accra: 50,
+      consoles_outside: 100,
+      others_accra: 25,
+      others_outside: 50,
+    };
+  }
+
+  const val = (data as any).value;
+  return {
+    phones_accra: Number(val.phones_accra ?? 35),
+    phones_outside: Number(val.phones_outside ?? 70),
+    consoles_accra: Number(val.consoles_accra ?? 50),
+    consoles_outside: Number(val.consoles_outside ?? 100),
+    others_accra: Number(val.others_accra ?? 25),
+    others_outside: Number(val.others_outside ?? 50),
+  };
+}
+
+export async function saveDeliveryConfig(config: DeliveryConfig): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error } = await (supabase.from("store_settings") as any)
+    .upsert({
+      key: "delivery_config",
+      value: {
+        phones_accra: config.phones_accra,
+        phones_outside: config.phones_outside,
+        consoles_accra: config.consoles_accra,
+        consoles_outside: config.consoles_outside,
+        others_accra: config.others_accra,
+        others_outside: config.others_outside,
+      },
+    });
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/admin/installments");
+  revalidatePath("/checkout");
+  return { success: true };
+}

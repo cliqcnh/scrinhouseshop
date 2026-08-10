@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cart";
 import { formatPrice } from "@/utils/format";
-import { placeOrder, type DeliveryAddress } from "@/actions/checkout/place-order";
+import { placeOrder, getCartDeliveryFee, type DeliveryAddress } from "@/actions/checkout/place-order";
 import type { AddressValues } from "@/actions/storefront/addresses";
 import { getWalletDetails } from "@/actions/storefront/wallet";
 
@@ -83,6 +83,24 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
   const [city, setCity]           = useState(defaultAddress?.city ?? "");
   const [landmark, setLandmark]   = useState(defaultAddress?.landmark ?? "");
   
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!region) {
+      setDeliveryFee(null);
+      return;
+    }
+    const variantIds = items.map((i) => i.variantId);
+    if (variantIds.length === 0) return;
+
+    getCartDeliveryFee(variantIds, region)
+      .then((fee) => setDeliveryFee(fee))
+      .catch((err) => {
+        console.error("Failed to load delivery fee:", err);
+        setDeliveryFee(0);
+      });
+  }, [region, items]);
+
   // Track selected address dropdown
   const [selectedAddressId, setSelectedAddressId] = useState(defaultAddress?.id ?? "new");
 
@@ -478,12 +496,14 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
             {useWallet && walletBalance > 0 && (
               <div className="flex justify-between text-green-700 font-semibold">
                 <span>Wallet Applied</span>
-                <span>-{formatPrice(Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0))))}</span>
+                <span>-{formatPrice(Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0))))}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Delivery</span>
-              <span className="text-muted-foreground">To be confirmed</span>
+              <span className="font-medium text-foreground">
+                {deliveryFee !== null ? (deliveryFee > 0 ? formatPrice(deliveryFee) : "Free") : "Select region to calculate"}
+              </span>
             </div>
           </div>
 
@@ -500,7 +520,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
               </label>
               {useWallet && (
                 <p className="text-[11px] text-muted-foreground pl-5">
-                  GH₵ {Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0))).toFixed(2)} will be deducted from your wallet balance.
+                  GH₵ {Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0))).toFixed(2)} will be deducted from your wallet balance.
                 </p>
               )}
             </div>
@@ -508,7 +528,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
 
           <div className="border-t border-border pt-4 flex justify-between text-sm font-semibold text-foreground">
             <span>{useWallet ? "Amount Due" : "Total"}</span>
-            <span>{formatPrice(Math.max(0, (subtotal() - (appliedCoupon?.discountAmount ?? 0)) - (useWallet ? Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0))) : 0)))}</span>
+            <span>{formatPrice(Math.max(0, (subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0)) - (useWallet ? Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0))) : 0)))}</span>
           </div>
 
           <Button

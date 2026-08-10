@@ -119,8 +119,23 @@ export async function placeOrder(
     throw new Error("Ghana Card details are required for installment orders.");
   }
 
+  // Fetch delivery settings
+  const { data: deliverySetting } = await (supabase.from("store_settings") as any)
+    .select("value")
+    .eq("key", "delivery_config")
+    .maybeSingle();
+
+  const deliveryConfig = deliverySetting?.value ?? {
+    phones_accra: 35,
+    phones_outside: 70,
+    consoles_accra: 50,
+    consoles_outside: 100,
+    others_accra: 25,
+    others_outside: 50,
+  };
+
   const subtotal = calculatedSubtotal;
-  const deliveryFee = 0;
+  const deliveryFee = calculateDeliveryFeeFromServer(variants ?? [], address.region, deliveryConfig);
   const total = subtotal + deliveryFee;
 
   let appliedWalletAmount = 0;
@@ -298,4 +313,58 @@ export async function placeOrder(
   }
 
   return { orderId: order.id, paystackRef: remainingTotal === 0 ? "WALLET" : paystackRef, authorizationUrl };
+}
+
+// ─── Delivery Fee Math Helpers ────────────────────────────────────────────────
+
+function calculateDeliveryFeeFromServer(variants: any[], region: string, config: any): number {
+  const isAccra = region.toLowerCase().includes("accra");
+
+  let hasConsole = false;
+  let hasPhone = false;
+
+  for (const v of variants) {
+    const prod = v.products;
+    if (!prod) continue;
+    const type = prod.product_type;
+    const slug = prod.categories?.slug ?? "";
+
+    if (type === "phone" || slug.includes("phone")) {
+      hasPhone = true;
+    }
+    if (slug.includes("console")) {
+      hasConsole = true;
+    }
+  }
+
+  if (hasConsole) {
+    return isAccra ? Number(config.consoles_accra ?? 50) : Number(config.consoles_outside ?? 100);
+  }
+  if (hasPhone) {
+    return isAccra ? Number(config.phones_accra ?? 35) : Number(config.phones_outside ?? 70);
+  }
+  return isAccra ? Number(config.others_accra ?? 25) : Number(config.others_outside ?? 50);
+}
+
+export async function getCartDeliveryFee(variantIds: string[], region: string): Promise<number> {
+  const supabase = await createClient();
+  const { data: variants } = await (supabase.from("product_variants") as any)
+    .select("id, products(product_type, categories!products_category_id_fkey(slug))")
+    .in("id", variantIds);
+
+  const { data: deliverySetting } = await (supabase.from("store_settings") as any)
+    .select("value")
+    .eq("key", "delivery_config")
+    .maybeSingle();
+
+  const config = deliverySetting?.value ?? {
+    phones_accra: 35,
+    phones_outside: 70,
+    consoles_accra: 50,
+    consoles_outside: 100,
+    others_accra: 25,
+    others_outside: 50,
+  };
+
+  return calculateDeliveryFeeFromServer(variants ?? [], region, config);
 }

@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import { CreditCard } from "lucide-react";
-import { listInstallmentApplications, getInstallmentConfig } from "@/actions/admin/installments";
+import { listInstallmentApplications, getInstallmentConfig, getDeliveryConfig } from "@/actions/admin/installments";
 import { InstallmentListClient } from "./installment-list-client";
 import { InstallmentSettingsCard } from "./installment-settings-card";
 import { InstallmentProductsCard } from "./installment-products-card";
+import { DeliverySettingsCard } from "./delivery-settings-card";
 
 export const metadata: Metadata = {
   title: "Installment Applications - Admin",
 };
 
 export default async function AdminInstallmentsPage() {
-  const [items, config] = await Promise.all([
+  const [items, config, deliveryConfig] = await Promise.all([
     listInstallmentApplications(),
     getInstallmentConfig(),
+    getDeliveryConfig(),
   ]);
 
   return (
@@ -31,6 +33,8 @@ export default async function AdminInstallmentsPage() {
       <InstallmentListClient initialItems={items} />
 
       <InstallmentSettingsCard initialConfig={config} />
+
+      <DeliverySettingsCard initialConfig={deliveryConfig} />
 
       <InstallmentProductsCard />
     </div>
