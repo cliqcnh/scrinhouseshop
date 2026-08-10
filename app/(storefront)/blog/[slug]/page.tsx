@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calendar, ChevronLeft, User } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { formatDate } from "@/utils/format";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -14,7 +14,7 @@ interface BlogPostPageProps {
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data: post } = await (supabase.from("posts") as any)
     .select("title, excerpt")
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // Fetch post + join author details from profiles
   const { data: postData, error } = await (supabase.from("posts") as any)
