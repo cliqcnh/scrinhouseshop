@@ -64,9 +64,9 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceRoleClient();
 
   // Fetch order details before update to know customer info
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, delivery_address, total, user_id")
+  const { data: order } = await (supabase
+    .from("orders") as any)
+    .select("id, delivery_address, total, user_id, order_items (product_name, quantity)")
     .eq("paystack_ref", ref)
     .maybeSingle();
 
@@ -83,22 +83,33 @@ export async function POST(req: NextRequest) {
 
   // Trigger payment notification alerts in background
   if (order) {
-    const address = order.delivery_address as any;
+    const address = (order as any).delivery_address as any;
     const customerPhone = address?.phone;
     const customerName = address?.fullName ?? "Customer";
-    const formattedTotal = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(Number(order.total));
-    const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/track?q=${order.id}`;
+    const formattedTotal = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(Number((order as any).total));
+    const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/track?q=${(order as any).id}`;
+
+    const items = ((order as any).order_items as any[]) ?? [];
+    const productNames = items
+      .map((item: any) => `${item.product_name} (x${item.quantity})`)
+      .join(", ");
+
+    // Send SMS alert to admin upon successful payment
+    await sendSMS(
+      "0559257401",
+      `[ADMIN ALERT] Order #${(order as any).id.slice(0, 8).toUpperCase()} has been PAID by ${customerName} (${customerPhone || "No Phone"}). Total: ${formattedTotal}. Items: ${productNames}`
+    );
 
     let userEmail = "";
-    if (order.user_id) {
-      const { data: userData } = await supabase.auth.admin.getUserById(order.user_id);
+    if ((order as any).user_id) {
+      const { data: userData } = await supabase.auth.admin.getUserById((order as any).user_id);
       userEmail = userData?.user?.email ?? "";
     }
 
     if (customerPhone) {
       await sendSMS(
         customerPhone,
-        `Hi ${customerName}, your payment of ${formattedTotal} for order #${order.id.slice(0, 8).toUpperCase()} was received successfully! We are now processing your shipment. Track here: ${trackingLink}`
+        `Hi ${customerName}, your payment of ${formattedTotal} for order #${(order as any).id.slice(0, 8).toUpperCase()} was received successfully! We are now processing your shipment. Track here: ${trackingLink}`
       );
     }
 
@@ -109,7 +120,7 @@ export async function POST(req: NextRequest) {
         `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
           <h2 style="color: #22c55e; font-size: 20px; font-weight: bold; margin-bottom: 10px;">Payment Confirmed!</h2>
           <p>Hello ${customerName},</p>
-          <p>We've received your payment of <strong>${formattedTotal}</strong> for order <strong>#${order.id.slice(0, 8).toUpperCase()}</strong>.</p>
+          <p>We've received your payment of <strong>${formattedTotal}</strong> for order <strong>#${(order as any).id.slice(0, 8).toUpperCase()}</strong>.</p>
           <p>Your payment was processed via ${channel ?? "Paystack"}. We are packaging your items and will notify you as soon as they ship.</p>
           <p><a href="${trackingLink}" style="display: inline-block; padding: 10px 20px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; margin-top: 10px;">Track Shipment Status</a></p>
           <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>

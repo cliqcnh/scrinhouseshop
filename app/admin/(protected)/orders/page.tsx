@@ -30,6 +30,7 @@ export default async function AdminOrdersPage() {
               <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/20">
                 <th className="px-4 py-3">Order ID</th>
                 <th className="px-4 py-3">Customer</th>
+                <th className="px-4 py-3">Products</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Total</th>
@@ -46,6 +47,11 @@ export default async function AdminOrdersPage() {
                   <td className="px-4 py-3.5">
                     <p className="font-medium text-foreground">{order.customerName}</p>
                     <p className="text-xs text-muted-foreground font-mono mt-0.5">{order.customerEmail}</p>
+                  </td>
+                  <td className="px-4 py-3.5 max-w-xs">
+                    <p className="text-xs text-foreground font-medium truncate" title={order.productNames}>
+                      {order.productNames}
+                    </p>
                   </td>
                   <td className="px-4 py-3.5 text-muted-foreground text-xs">
                     {formatDate(order.createdAt)}

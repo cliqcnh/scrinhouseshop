@@ -290,10 +290,19 @@ export async function placeOrder(
       `Hello ${address.fullName}, your ScrinHouse order has been received! Total: ${formattedTotal}. Ref: ${paystackRef}. Track here: ${trackingLink}`
     );
 
-    await sendSMS(
-      "0559257401",
-      `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} placed by ${address.fullName} (${address.phone}). Total: ${formattedTotal}. Type: ${hasInstallment ? "Installment" : "Regular"}`
-    );
+    const isPaid = remainingTotal === 0;
+    const shouldAlertAdminNow = hasInstallment || isPaid;
+
+    if (shouldAlertAdminNow) {
+      const productNames = cartItems
+        .map((item) => `${item.name} (x${item.quantity})`)
+        .join(", ");
+
+      await sendSMS(
+        "0559257401",
+        `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} (${hasInstallment ? "Installment" : "Regular"}) placed by ${address.fullName} (${address.phone}) is ${isPaid ? "PAID" : "SUBMITTED FOR REVIEW"}. Total: ${formattedTotal}. Items: ${productNames}`
+      );
+    }
 
     await sendEmail(
       user.email,

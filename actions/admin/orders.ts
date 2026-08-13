@@ -13,15 +13,16 @@ export interface AdminOrderRow {
   status: string;
   createdAt: string;
   paymentMethod: string;
+  productNames: string;
 }
 
 export async function listAdminOrders(): Promise<AdminOrderRow[]> {
   await requireStaffUser();
   const supabase = await createClient();
   
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select("id, total, status, created_at, paystack_channel, user_id")
+  const { data: orders, error } = await (supabase
+    .from("orders") as any)
+    .select("id, total, status, created_at, paystack_channel, user_id, order_items (product_name, quantity)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -29,7 +30,7 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
   }
 
   // Fetch profiles separately to avoid PostgREST foreign key cache mismatch
-  const userIds = Array.from(new Set((orders ?? []).map((o) => o.user_id).filter(Boolean)));
+  const userIds: string[] = Array.from(new Set((orders ?? []).map((o: any) => o.user_id).filter(Boolean))) as string[];
   const profileMap = new Map<string, { fullName: string; phone: string }>();
 
   if (userIds.length > 0) {
@@ -46,15 +47,23 @@ export async function listAdminOrders(): Promise<AdminOrderRow[]> {
     });
   }
 
-  return (orders ?? []).map((row: any) => ({
-    id: row.id,
-    customerName: profileMap.get(row.user_id)?.fullName ?? "Guest",
-    customerEmail: profileMap.get(row.user_id)?.phone ?? "—",
-    total: Number(row.total),
-    status: row.status,
-    createdAt: row.created_at,
-    paymentMethod: row.paystack_channel ?? "paystack",
-  }));
+  return (orders ?? []).map((row: any) => {
+    const items = row.order_items ?? [];
+    const productNames = items
+      .map((item: any) => `${item.product_name} (x${item.quantity})`)
+      .join(", ");
+
+    return {
+      id: row.id,
+      customerName: profileMap.get(row.user_id)?.fullName ?? "Guest",
+      customerEmail: profileMap.get(row.user_id)?.phone ?? "—",
+      total: Number(row.total),
+      status: row.status,
+      createdAt: row.created_at,
+      paymentMethod: row.paystack_channel ?? "paystack",
+      productNames: productNames || "No items",
+    };
+  });
 }
 
 export async function getAdminOrderById(id: string) {
