@@ -6,6 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 import { requireStaffUser } from "@/lib/supabase/admin-guard";
 import { sendSMS } from "@/lib/notifications";
 
+export interface InstallmentPaymentRow {
+  id: string;
+  amount: number;
+  paymentMethod: string;
+  paymentRef: string | null;
+  createdAt: string;
+}
+
 export interface InstallmentApplicationRow {
   id: string;
   orderId: string;
@@ -24,6 +32,8 @@ export interface InstallmentApplicationRow {
   status: "pending_review" | "approved" | "rejected" | "completed";
   notes: string | null;
   createdAt: string;
+  installmentFrequency: "monthly" | "weekend";
+  payments: InstallmentPaymentRow[];
 }
 
 export async function listInstallmentApplications(): Promise<InstallmentApplicationRow[]> {
@@ -45,8 +55,10 @@ export async function listInstallmentApplications(): Promise<InstallmentApplicat
       status,
       notes,
       created_at,
+      installment_frequency,
       profiles (full_name, phone),
-      products (name)
+      products (name),
+      installment_payments (id, amount, payment_method, payment_ref, created_at)
     `)
     .order("created_at", { ascending: false });
 
@@ -73,6 +85,14 @@ export async function listInstallmentApplications(): Promise<InstallmentApplicat
     status: row.status,
     notes: row.notes,
     createdAt: row.created_at,
+    installmentFrequency: row.installment_frequency || "monthly",
+    payments: (row.installment_payments ?? []).map((p: any) => ({
+      id: p.id,
+      amount: Number(p.amount),
+      paymentMethod: p.payment_method,
+      paymentRef: p.payment_ref,
+      createdAt: p.created_at,
+    })),
   }));
 }
 
@@ -320,5 +340,30 @@ export async function saveDeliveryConfig(config: DeliveryConfig): Promise<{ succ
 
   revalidatePath("/admin/installments");
   revalidatePath("/checkout");
+  return { success: true };
+}
+
+export async function recordInstallmentPayment(
+  applicationId: string,
+  amount: number,
+  paymentMethod: string = "manual",
+  paymentRef?: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error } = await (supabase.from("installment_payments") as any).insert({
+    application_id: applicationId,
+    amount,
+    payment_method: paymentMethod,
+    payment_ref: paymentRef || `MAN-${Date.now()}`,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin/installments");
+  revalidatePath("/account");
   return { success: true };
 }

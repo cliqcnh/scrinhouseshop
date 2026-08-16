@@ -20,6 +20,7 @@ export interface CartItem {
   depositAmount?: number;
   remainingBalance?: number;
   totalInstallmentPrice?: number;
+  installmentFrequency?: "monthly" | "weekend";
 }
 
 interface CartState {
@@ -46,11 +47,18 @@ export const useCartStore = create<CartState>()(
       addItem(incoming) {
         const qty = incoming.quantity ?? 1;
         set((state) => {
-          const existing = state.items.find((i) => i.variantId === incoming.variantId && i.isInstallment === incoming.isInstallment);
+          const existing = state.items.find(
+            (i) =>
+              i.variantId === incoming.variantId &&
+              i.isInstallment === incoming.isInstallment &&
+              i.installmentFrequency === incoming.installmentFrequency
+          );
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.variantId === incoming.variantId && i.isInstallment === incoming.isInstallment
+                i.variantId === incoming.variantId &&
+                i.isInstallment === incoming.isInstallment &&
+                i.installmentFrequency === incoming.installmentFrequency
                   ? { ...i, quantity: i.quantity + qty }
                   : i,
               ),

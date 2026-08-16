@@ -222,6 +222,7 @@ export async function placeOrder(
         ghana_card_front_url: installmentDetails.ghanaCardFrontUrl || "N/A",
         ghana_card_back_url: installmentDetails.ghanaCardBackUrl || "N/A",
         status: "pending_review",
+        installment_frequency: item.installmentFrequency || "monthly",
       }));
 
     if (installmentRows.length > 0) {

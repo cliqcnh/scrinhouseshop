@@ -25,6 +25,7 @@ export function AddToCartPanel({
   const [wishlisted, setWishlisted] = useState(initialWishlistState ?? false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"full" | "installment">("full");
+  const [installmentFrequency, setInstallmentFrequency] = useState<"monthly" | "weekend">("monthly");
 
   async function handleToggleWishlist() {
     setWishlistLoading(true);
@@ -68,6 +69,10 @@ export function AddToCartPanel({
   const maxQuantity = selectedVariant?.stockQuantity ?? 0;
   const inStock = maxQuantity > 0;
 
+  // Monthly vs Weekend repayment calculators (3 months)
+  const monthlyRate = Math.round((installment.remainingBalance / 3) * 100) / 100;
+  const weekendRate = Math.round((installment.remainingBalance / 12) * 100) / 100;
+
   function buildVariantLabel() {
     const parts = [selectedStorage, selectedColor].filter(Boolean);
     return parts.join(" / ");
@@ -77,11 +82,12 @@ export function AddToCartPanel({
     if (!selectedVariant || !inStock) return;
 
     if (isEligibleForInstallment && paymentMode === "installment") {
+      const planLabel = installmentFrequency === "monthly" ? "3 Months Monthly" : "3 Months Weekend";
       addItem({
         variantId: selectedVariant.id,
         productId: product.id,
         name: product.name,
-        variantLabel: buildVariantLabel() ? `${buildVariantLabel()} (Installment Plan)` : "Installment Plan",
+        variantLabel: buildVariantLabel() ? `${buildVariantLabel()} (Installment: ${planLabel})` : `Installment: ${planLabel}`,
         imageUrl: product.images[0]?.url ?? product.primaryImageUrl ?? null,
         price: selectedVariant.price,
         quantity,
@@ -89,6 +95,7 @@ export function AddToCartPanel({
         depositAmount: installment.depositAmount,
         remainingBalance: installment.remainingBalance,
         totalInstallmentPrice: installment.totalPrice,
+        installmentFrequency,
       });
     } else {
       addItem({
@@ -103,7 +110,7 @@ export function AddToCartPanel({
     }
 
     toast.success(`${product.name} added to cart`, {
-      description: isEligibleForInstallment && paymentMode === "installment" ? "Added under Installment Plan" : buildVariantLabel() || undefined,
+      description: isEligibleForInstallment && paymentMode === "installment" ? `Added under ${installmentFrequency === "monthly" ? "Monthly" : "Weekend"} installment plan` : buildVariantLabel() || undefined,
       action: { label: "View cart", onClick: () => window.dispatchEvent(new CustomEvent("open-cart")) },
     });
   }
@@ -148,18 +155,60 @@ export function AddToCartPanel({
           </div>
 
           {paymentMode === "installment" && (
-            <div className="mt-3 border-t border-border pt-3 space-y-1.5 text-xs">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Down Payment ({installment.depositPercentage}% today):</span>
-                <span className="font-bold text-foreground">{formatPrice(installment.depositAmount)}</span>
+            <div className="mt-3 border-t border-border pt-3 space-y-3 text-xs">
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Down Payment ({installment.depositPercentage}% today):</span>
+                  <span className="font-bold text-foreground">{formatPrice(installment.depositAmount)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Remaining Balance:</span>
+                  <span className="font-bold text-foreground">{formatPrice(installment.remainingBalance)}</span>
+                </div>
+                <div className="flex justify-between border-t border-border/60 pt-1.5 font-bold text-foreground">
+                  <span>Total Hire Purchase Cost ({installment.profitPercentage}% plan):</span>
+                  <span>{formatPrice(installment.totalPrice)}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Remaining Balance (upon pickup/delivery):</span>
-                <span className="font-bold text-foreground">{formatPrice(installment.remainingBalance)}</span>
-              </div>
-              <div className="flex justify-between border-t border-border/60 pt-1.5 font-bold text-foreground">
-                <span>Total Hire Purchase Cost ({installment.profitPercentage}% plan):</span>
-                <span>{formatPrice(installment.totalPrice)}</span>
+
+              {/* Installment Frequency Option Selector */}
+              <div className="border-t border-border/60 pt-3 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground">Choose Payment Frequency</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInstallmentFrequency("monthly")}
+                    className={cn(
+                      "border p-2 text-left transition-colors rounded-none flex flex-col justify-between h-14",
+                      installmentFrequency === "monthly"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-white text-muted-foreground hover:border-foreground/40",
+                    )}
+                  >
+                    <span className="text-[11px] font-bold">Monthly Plan</span>
+                    <span className="text-[10px] opacity-80 font-normal">
+                      {formatPrice(monthlyRate)} / mo (3x)
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInstallmentFrequency("weekend")}
+                    className={cn(
+                      "border p-2 text-left transition-colors rounded-none flex flex-col justify-between h-14",
+                      installmentFrequency === "weekend"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-white text-muted-foreground hover:border-foreground/40",
+                    )}
+                  >
+                    <span className="text-[11px] font-bold">Weekend Plan</span>
+                    <span className="text-[10px] opacity-80 font-normal">
+                      {formatPrice(weekendRate)} / wk (12x)
+                    </span>
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
+                  * Remaining balance of {formatPrice(installment.remainingBalance)} payable over 3 months as either 3 monthly payments of {formatPrice(monthlyRate)} or 12 weekend/weekly payments of {formatPrice(weekendRate)}.
+                </p>
               </div>
             </div>
           )}
