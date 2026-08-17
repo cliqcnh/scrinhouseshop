@@ -115,6 +115,7 @@ export async function getInstallmentConfig(): Promise<InstallmentConfig> {
     profitPercentage: val.profit_percentage ?? 20,
     depositPercentage: val.deposit_percentage ?? 40,
     isEnabled: val.is_enabled ?? true,
+    durationMonths: val.duration_months ?? 3,
   };
 }
 
@@ -128,6 +129,7 @@ export async function saveInstallmentConfig(
     profit_percentage: config.profitPercentage,
     deposit_percentage: config.depositPercentage,
     is_enabled: config.isEnabled ?? true,
+    duration_months: config.durationMonths ?? 3,
   };
 
   const { error } = await (supabase.from("store_settings") as any).upsert({

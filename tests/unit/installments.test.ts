@@ -86,6 +86,11 @@ describe("Installment Financial Math & Server Actions", () => {
       expect(result.depositAmount).toBe(1200);
       expect(result.remainingBalance).toBe(1800);
     });
+
+    it("supports dynamic installment plan durations", () => {
+      const result = calculateInstallment(10000, { profitPercentage: 20, depositPercentage: 40, durationMonths: 6 });
+      expect(result.durationMonths).toBe(6);
+    });
   });
 
   describe("Admin Installment Actions", () => {

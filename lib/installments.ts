@@ -2,12 +2,14 @@ export interface InstallmentConfig {
   profitPercentage: number;  // e.g. 20 for 20%
   depositPercentage: number; // e.g. 40 for 40%
   isEnabled?: boolean;
+  durationMonths?: number;   // e.g. 3 for 3 months
 }
 
 export const DEFAULT_INSTALLMENT_CONFIG: InstallmentConfig = {
   profitPercentage: 20,
   depositPercentage: 40,
   isEnabled: true,
+  durationMonths: 3,
 };
 
 export interface InstallmentBreakdown {
@@ -18,6 +20,7 @@ export interface InstallmentBreakdown {
   markupAmount: number;
   profitPercentage: number;
   depositPercentage: number;
+  durationMonths: number;
 }
 
 /**
@@ -48,5 +51,6 @@ export function calculateInstallment(
     markupAmount,
     profitPercentage: config.profitPercentage ?? 20,
     depositPercentage: config.depositPercentage ?? 40,
+    durationMonths: config.durationMonths ?? 3,
   };
 }

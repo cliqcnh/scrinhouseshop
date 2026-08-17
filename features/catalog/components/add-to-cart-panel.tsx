@@ -69,9 +69,11 @@ export function AddToCartPanel({
   const maxQuantity = selectedVariant?.stockQuantity ?? 0;
   const inStock = maxQuantity > 0;
 
-  // Monthly vs Weekend repayment calculators (3 months)
-  const monthlyRate = Math.round((installment.remainingBalance / 3) * 100) / 100;
-  const weekendRate = Math.round((installment.remainingBalance / 12) * 100) / 100;
+  // Monthly vs Weekend repayment calculators (dynamic)
+  const monthlyPaymentsCount = installment.durationMonths;
+  const weekendPaymentsCount = installment.durationMonths * 4;
+  const monthlyRate = Math.round((installment.remainingBalance / monthlyPaymentsCount) * 100) / 100;
+  const weekendRate = Math.round((installment.remainingBalance / weekendPaymentsCount) * 100) / 100;
 
   function buildVariantLabel() {
     const parts = [selectedStorage, selectedColor].filter(Boolean);
@@ -82,7 +84,9 @@ export function AddToCartPanel({
     if (!selectedVariant || !inStock) return;
 
     if (isEligibleForInstallment && paymentMode === "installment") {
-      const planLabel = installmentFrequency === "monthly" ? "3 Months Monthly" : "3 Months Weekend";
+      const planLabel = installmentFrequency === "monthly"
+        ? `${installment.durationMonths} Months Monthly`
+        : `${installment.durationMonths} Months Weekend`;
       addItem({
         variantId: selectedVariant.id,
         productId: product.id,
@@ -187,7 +191,7 @@ export function AddToCartPanel({
                   >
                     <span className="text-[11px] font-bold">Monthly Plan</span>
                     <span className="text-[10px] opacity-80 font-normal">
-                      {formatPrice(monthlyRate)} / mo (3x)
+                      {formatPrice(monthlyRate)} / mo ({monthlyPaymentsCount}x)
                     </span>
                   </button>
                   <button
@@ -202,12 +206,12 @@ export function AddToCartPanel({
                   >
                     <span className="text-[11px] font-bold">Weekend Plan</span>
                     <span className="text-[10px] opacity-80 font-normal">
-                      {formatPrice(weekendRate)} / wk (12x)
+                      {formatPrice(weekendRate)} / wk ({weekendPaymentsCount}x)
                     </span>
                   </button>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
-                  * Remaining balance of {formatPrice(installment.remainingBalance)} payable over 3 months as either 3 monthly payments of {formatPrice(monthlyRate)} or 12 weekend/weekly payments of {formatPrice(weekendRate)}.
+                  * Remaining balance of {formatPrice(installment.remainingBalance)} payable over {installment.durationMonths} months as either {monthlyPaymentsCount} monthly payments of {formatPrice(monthlyRate)} or {weekendPaymentsCount} weekend/weekly payments of {formatPrice(weekendRate)}.
                 </p>
               </div>
             </div>
