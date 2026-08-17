@@ -43,3 +43,27 @@ export async function submitTradeInRequest(
   revalidatePath("/admin/trade-ins");
   return { success: true, requestId: data.id };
 }
+
+export async function acceptTradeInValuation(
+  requestId: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: "You must be signed in to accept a valuation." };
+  }
+
+  const { error } = await (supabase.from("trade_in_requests") as any)
+    .update({ status: "accepted" })
+    .eq("id", requestId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin/trade-ins");
+  revalidatePath("/account");
+  return { success: true };
+}

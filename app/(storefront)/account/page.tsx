@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Heart, MapPin, ShieldCheck, User, Wallet, CreditCard } from "lucide-react";
+import { Package, Heart, MapPin, ShieldCheck, User, Wallet, CreditCard, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/actions/auth/customer";
 import { formatDate, formatPrice } from "@/utils/format";
-import { getCustomerOrders, getCustomerWarranties, getCustomerInstallmentApplications } from "@/actions/storefront/dashboard";
+import {
+  getCustomerOrders,
+  getCustomerWarranties,
+  getCustomerInstallmentApplications,
+  getCustomerTradeInRequests,
+} from "@/actions/storefront/dashboard";
 import { getWishlistProducts } from "@/actions/storefront/wishlist";
 import { getAddresses } from "@/actions/storefront/addresses";
 import { AddressManagerClient } from "@/components/account/address-manager-client";
 import { ProductCard } from "@/components/shared/product-card";
 import { getWalletDetails } from "@/actions/storefront/wallet";
 import { WalletClient } from "@/components/account/wallet-client";
+import { CustomerTradeInList } from "@/components/account/trade-in-list-client";
 
 export const metadata: Metadata = { title: "My Account" };
 
@@ -29,7 +35,7 @@ export default async function AccountPage({ searchParams }: Props) {
   const { welcome, tab = "orders" } = await searchParams;
 
   // Parallel loading of all dashboard data
-  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments] = await Promise.all([
+  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, phone, created_at, referral_code")
@@ -42,12 +48,14 @@ export default async function AccountPage({ searchParams }: Props) {
     getCustomerWarranties(),
     getWalletDetails().catch(() => ({ balance: 0, referralCode: null, transactions: [], withdrawals: [] })),
     getCustomerInstallmentApplications(),
+    getCustomerTradeInRequests(),
   ]);
 
   // Tab links
   const tabs = [
     { id: "orders", label: "Orders", icon: Package, count: orders.length },
     { id: "installments", label: "Installment Plans", icon: CreditCard, count: installments.length },
+    { id: "tradeins", label: "Trade-Ins", icon: RefreshCw, count: tradeins.length },
     { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistProducts.length },
     { id: "wallet", label: "Referrals & Wallet", icon: Wallet, count: 0 },
     { id: "addresses", label: "Addresses", icon: MapPin, count: addresses.length },
@@ -284,6 +292,14 @@ export default async function AccountPage({ searchParams }: Props) {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: TRADE-INS */}
+          {tab === "tradeins" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Device Trade-Ins</h2>
+              <CustomerTradeInList initialItems={tradeins} />
             </div>
           )}
 

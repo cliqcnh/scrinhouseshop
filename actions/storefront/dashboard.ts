@@ -253,3 +253,48 @@ export async function getCustomerInstallmentApplications(): Promise<CustomerInst
     orderStatus: row.orders?.status ?? "pending_payment",
   }));
 }
+
+export interface CustomerTradeInRequest {
+  id: string;
+  brand: string;
+  model: string;
+  storage: string;
+  conditionGrade: string;
+  screenCondition: string;
+  batteryHealth: string;
+  estimatedValue: number;
+  contactPhone: string;
+  status: string;
+  createdAt: string;
+}
+
+export async function getCustomerTradeInRequests(): Promise<CustomerTradeInRequest[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("trade_in_requests")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error loading customer trade-ins:", error?.message);
+    return [];
+  }
+
+  return (data as any[]).map((row: any) => ({
+    id: row.id,
+    brand: row.brand,
+    model: row.model,
+    storage: row.storage,
+    conditionGrade: row.condition_grade,
+    screenCondition: row.screen_condition,
+    batteryHealth: row.battery_health,
+    estimatedValue: Number(row.estimated_value),
+    contactPhone: row.contact_phone,
+    status: row.status,
+    createdAt: row.created_at,
+  }));
+}

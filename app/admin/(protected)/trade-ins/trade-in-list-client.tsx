@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, RefreshCw, X } from "lucide-react";
+import { Check, RefreshCw, X, Coins, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, formatDate } from "@/utils/format";
 import { updateTradeInStatus, type TradeInRequestRow } from "@/actions/admin/trade-ins";
@@ -12,10 +12,10 @@ export function TradeInListClient({ initialItems }: { initialItems: TradeInReque
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, number>>({});
 
-  async function handleStatusChange(id: string, status: "approved" | "rejected" | "completed") {
+  async function handleStatusChange(id: string, status: "valued" | "rejected" | "completed") {
     const offeredQuote = quotes[id];
-    if (status === "approved" && (!offeredQuote || offeredQuote <= 0)) {
-      toast.error("Please enter a valid GHS valuation quote before approving.");
+    if (status === "valued" && (!offeredQuote || offeredQuote <= 0)) {
+      toast.error("Please enter a valid GHS valuation quote before submitting.");
       return;
     }
 
@@ -26,10 +26,23 @@ export function TradeInListClient({ initialItems }: { initialItems: TradeInReque
         toast.error(res.error ?? "Failed to update status");
         return;
       }
+
       setItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status, estimatedValue: offeredQuote ?? item.estimatedValue } : item))
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, status, estimatedValue: offeredQuote ?? item.estimatedValue }
+            : item
+        )
       );
-      toast.success(`Trade-in valuation set to GH₵${offeredQuote?.toFixed(2)} & marked as ${status}`);
+
+      if (status === "valued") {
+        toast.success(`Valuation set to GH₵${offeredQuote?.toFixed(2)}. Awaiting customer acceptance.`);
+      } else if (status === "completed") {
+        const item = items.find((i) => i.id === id);
+        toast.success(`Credit of GH₵${(item?.estimatedValue ?? 0).toFixed(2)} released to wallet!`);
+      } else {
+        toast.success(`Trade-in request status updated to ${status}`);
+      }
     } catch {
       toast.error("Error updating trade-in status");
     } finally {
@@ -101,12 +114,14 @@ export function TradeInListClient({ initialItems }: { initialItems: TradeInReque
               <td className="p-3.5">
                 <span
                   className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-none border ${
-                    item.status === "approved"
+                    item.status === "completed"
                       ? "border-green-600 bg-green-50 text-green-700"
                       : item.status === "rejected"
                       ? "border-red-600 bg-red-50 text-red-700"
-                      : item.status === "completed"
+                      : item.status === "accepted"
                       ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : item.status === "valued"
+                      ? "border-purple-600 bg-purple-50 text-purple-700"
                       : "border-amber-600 bg-amber-50 text-amber-700"
                   }`}
                 >
@@ -121,10 +136,10 @@ export function TradeInListClient({ initialItems }: { initialItems: TradeInReque
                     <Button
                       size="sm"
                       disabled={loadingId === item.id}
-                      onClick={() => handleStatusChange(item.id, "approved")}
+                      onClick={() => handleStatusChange(item.id, "valued")}
                       className="rounded-none bg-green-700 hover:bg-green-800 text-white text-[10px] px-2.5 py-1 h-auto font-bold"
                     >
-                      <Check className="size-3 mr-1" /> Set Quote &amp; Approve
+                      <Check className="size-3 mr-1" /> Submit Valuation
                     </Button>
                     <Button
                       size="sm"
@@ -137,15 +152,24 @@ export function TradeInListClient({ initialItems }: { initialItems: TradeInReque
                     </Button>
                   </>
                 )}
-                {item.status === "approved" && (
+                {item.status === "valued" && (
+                  <span className="text-[10px] text-muted-foreground font-semibold italic">Awaiting Customer Acceptance</span>
+                )}
+                {item.status === "accepted" && (
                   <Button
                     size="sm"
                     disabled={loadingId === item.id}
                     onClick={() => handleStatusChange(item.id, "completed")}
-                    className="rounded-none bg-foreground text-background text-[10px] px-2.5 py-1 h-auto"
+                    className="rounded-none bg-foreground text-background text-[10px] px-2.5 py-1 h-auto font-bold flex items-center justify-center inline-flex"
                   >
-                    <RefreshCw className="size-3 mr-1" /> Complete Swap
+                    <Coins className="size-3 mr-1 text-yellow-500" /> Release Credit &amp; Complete
                   </Button>
+                )}
+                {item.status === "completed" && (
+                  <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">✓ Credit Released</span>
+                )}
+                {item.status === "rejected" && (
+                  <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider">Rejected</span>
                 )}
               </td>
             </tr>

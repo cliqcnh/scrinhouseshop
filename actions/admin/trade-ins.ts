@@ -18,7 +18,7 @@ export interface TradeInRequestRow {
   estimatedValue: number;
   contactPhone: string;
   notes: string | null;
-  status: "pending" | "approved" | "rejected" | "completed";
+  status: "pending" | "valued" | "accepted" | "completed" | "rejected";
   createdAt: string;
 }
 
@@ -70,7 +70,7 @@ export async function listAdminTradeIns(): Promise<TradeInRequestRow[]> {
 
 export async function updateTradeInStatus(
   id: string,
-  status: "pending" | "approved" | "rejected" | "completed",
+  status: "pending" | "valued" | "accepted" | "completed" | "rejected",
   offeredQuote?: number
 ): Promise<{ success: boolean; error?: string }> {
   await requireStaffUser();
