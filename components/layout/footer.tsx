@@ -11,6 +11,7 @@ const FOOTER_LINKS = {
     { label: "Book a Repair", href: "/repairs/book" },
     { label: "Track Repair", href: "/track" },
     { label: "Doorstep Pickup", href: "/repairs/pickup" },
+    { label: "ScrinHouse Care", href: "/care" },
   ],
   Company: [
     { label: "About ScrinHouse", href: "/about" },

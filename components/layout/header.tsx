@@ -19,6 +19,7 @@ const STATIC_LINKS = [
   { label: "🔥 Market Days", href: "/market-days" },
   { label: "Trade-In & Swap", href: "/trade-in" },
   { label: "Repairs", href: "/repairs" },
+  { label: "ScrinHouse Care", href: "/care" },
   { label: "Track Order", href: "/track" },
 ];
 
@@ -134,6 +135,12 @@ export async function Header() {
             className="px-3.5 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
           >
             Repairs
+          </Link>
+          <Link
+            href="/care"
+            className="px-3.5 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
+          >
+            ScrinHouse Care
           </Link>
           <Link
             href="/track"
