@@ -63,6 +63,61 @@ export async function POST(req: NextRequest) {
   // Use service-role client — this runs outside user auth context
   const supabase = createServiceRoleClient();
 
+  if (ref.startsWith("SCR-CARE-")) {
+    const { data: sub } = await (supabase.from("care_subscriptions") as any)
+      .select("id, user_id, tier_id, care_tiers(name, price)")
+      .eq("paystack_ref", ref)
+      .maybeSingle();
+
+    if (!sub) {
+      return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+    }
+
+    const startsAt = new Date().toISOString();
+    const endsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { error: subErr } = await (supabase.from("care_subscriptions") as any)
+      .update({
+        status: "active",
+        starts_at: startsAt,
+        ends_at: endsAt,
+        price_paid: Number(sub.care_tiers?.price ?? 0),
+      })
+      .eq("paystack_ref", ref);
+
+    if (subErr) {
+      console.error("[paystack-webhook] Failed to activate care subscription:", subErr.message);
+      return NextResponse.json({ error: "Care DB update failed" }, { status: 500 });
+    }
+
+    const { data: userData } = await supabase.auth.admin.getUserById(sub.user_id);
+    const userEmail = userData?.user?.email ?? "";
+    const userPhone = userData?.user?.phone ?? "";
+
+    const tierName = sub.care_tiers?.name ?? "ScrinHouse Care";
+    const formattedPrice = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(Number(sub.care_tiers?.price ?? 0));
+
+    if (userPhone) {
+      await sendSMS(
+        userPhone,
+        `Hi, your ScrinHouse Care subscription (${tierName}) is now ACTIVE! Details: ${process.env.NEXT_PUBLIC_APP_URL}/account?tab=care`
+      );
+    }
+    if (userEmail) {
+      await sendEmail(
+        userEmail,
+        `ScrinHouse Care Subscription Activated!`,
+        `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
+          <h2 style="color: #1d4ed8;">Subscription Active!</h2>
+          <p>Your <strong>${tierName}</strong> protection is now active.</p>
+          <p><strong>Paid:</strong> ${formattedPrice}</p>
+          <p>View your plan status and claim logs at ScrinHouse: <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/account?tab=care">My Account Care</a></p>
+        </div>`
+      );
+    }
+
+    return NextResponse.json({ received: true });
+  }
+
   // Fetch order details before update to know customer info
   const { data: order } = await (supabase
     .from("orders") as any)

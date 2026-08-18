@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Heart, MapPin, ShieldCheck, User, Wallet, CreditCard, RefreshCw } from "lucide-react";
+import { Package, Heart, MapPin, ShieldCheck, User, Wallet, CreditCard, RefreshCw, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/actions/auth/customer";
@@ -11,6 +11,7 @@ import {
   getCustomerWarranties,
   getCustomerInstallmentApplications,
   getCustomerTradeInRequests,
+  getCustomerCareSubscriptions,
 } from "@/actions/storefront/dashboard";
 import { getWishlistProducts } from "@/actions/storefront/wishlist";
 import { getAddresses } from "@/actions/storefront/addresses";
@@ -19,6 +20,7 @@ import { ProductCard } from "@/components/shared/product-card";
 import { getWalletDetails } from "@/actions/storefront/wallet";
 import { WalletClient } from "@/components/account/wallet-client";
 import { CustomerTradeInList } from "@/components/account/trade-in-list-client";
+import { CustomerCareList } from "@/components/account/care-list-client";
 
 export const metadata: Metadata = { title: "My Account" };
 
@@ -35,7 +37,7 @@ export default async function AccountPage({ searchParams }: Props) {
   const { welcome, tab = "orders" } = await searchParams;
 
   // Parallel loading of all dashboard data
-  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins] = await Promise.all([
+  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins, careSubs] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, phone, created_at, referral_code")
@@ -49,6 +51,7 @@ export default async function AccountPage({ searchParams }: Props) {
     getWalletDetails().catch(() => ({ balance: 0, referralCode: null, transactions: [], withdrawals: [] })),
     getCustomerInstallmentApplications(),
     getCustomerTradeInRequests(),
+    getCustomerCareSubscriptions(),
   ]);
 
   // Tab links
@@ -56,6 +59,7 @@ export default async function AccountPage({ searchParams }: Props) {
     { id: "orders", label: "Orders", icon: Package, count: orders.length },
     { id: "installments", label: "Installment Plans", icon: CreditCard, count: installments.length },
     { id: "tradeins", label: "Trade-Ins", icon: RefreshCw, count: tradeins.length },
+    { id: "care", label: "ScrinHouse Care", icon: Shield, count: careSubs.length },
     { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistProducts.length },
     { id: "wallet", label: "Referrals & Wallet", icon: Wallet, count: 0 },
     { id: "addresses", label: "Addresses", icon: MapPin, count: addresses.length },
@@ -300,6 +304,14 @@ export default async function AccountPage({ searchParams }: Props) {
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-foreground">Device Trade-Ins</h2>
               <CustomerTradeInList initialItems={tradeins} />
+            </div>
+          )}
+
+          {/* TAB: CARE */}
+          {tab === "care" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">ScrinHouse Care Protection</h2>
+              <CustomerCareList subscriptions={careSubs} />
             </div>
           )}
 

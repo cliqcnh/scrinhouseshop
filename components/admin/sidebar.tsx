@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Flame,
   Wallet,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,7 @@ const NAV_SECTIONS = [
       { href: "/admin/customers", label: "Customers", icon: Users },
       { href: "/admin/wallet", label: "Wallet & Payouts", icon: Wallet },
       { href: "/admin/repairs", label: "Repairs", icon: Wrench },
+      { href: "/admin/care", label: "ScrinHouse Care", icon: Shield },
     ],
   },
   {

@@ -298,3 +298,80 @@ export async function getCustomerTradeInRequests(): Promise<CustomerTradeInReque
     createdAt: row.created_at,
   }));
 }
+
+export interface CustomerCareSubscription {
+  id: string;
+  imeiSerial: string;
+  deviceModel: string;
+  status: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  pricePaid: number;
+  tierName: string;
+  tierPrice: number;
+  claims: {
+    id: string;
+    claimType: string;
+    partCost: number;
+    excessPaid: number;
+    coPayPaid: number;
+    notes: string | null;
+    createdAt: string;
+  }[];
+}
+
+export async function getCustomerCareSubscriptions(): Promise<CustomerCareSubscription[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await (supabase
+    .from("care_subscriptions") as any)
+    .select(`
+      id,
+      imei_serial,
+      device_model,
+      status,
+      starts_at,
+      ends_at,
+      price_paid,
+      care_tiers ( name, price ),
+      care_claims (
+        id,
+        claim_type,
+        part_cost,
+        excess_paid,
+        co_pay_paid,
+        notes,
+        created_at
+      )
+    `)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error loading customer care subscriptions:", error?.message);
+    return [];
+  }
+
+  return (data as any[]).map((row: any) => ({
+    id: row.id,
+    imeiSerial: row.imei_serial,
+    deviceModel: row.device_model,
+    status: row.status,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    pricePaid: Number(row.price_paid),
+    tierName: row.care_tiers?.name ?? "Care Plan",
+    tierPrice: Number(row.care_tiers?.price ?? 0),
+    claims: (row.care_claims ?? []).map((c: any) => ({
+      id: c.id,
+      claimType: c.claim_type,
+      partCost: Number(c.part_cost),
+      excessPaid: Number(c.excess_paid),
+      coPayPaid: Number(c.co_pay_paid),
+      notes: c.notes,
+      createdAt: c.created_at,
+    })),
+  }));
+}
