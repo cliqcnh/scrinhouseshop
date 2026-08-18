@@ -113,19 +113,15 @@ export function CareListClient({
       setLoading(false);
     }
   }
-
-  if (items.length === 0) {
-    return (
-      <div className="border border-border p-12 text-center text-sm text-muted-foreground bg-white">
-        No ScrinHouse Care subscriptions registered yet.
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="overflow-x-auto border border-border bg-white">
-        <table className="w-full text-left text-xs">
+      {items.length === 0 ? (
+        <div className="border border-border p-12 text-center text-sm text-muted-foreground bg-white">
+          No ScrinHouse Care subscriptions registered yet.
+        </div>
+      ) : (
+        <div className="overflow-x-auto border border-border bg-white">
+          <table className="w-full text-left text-xs">
           <thead className="border-b border-border bg-[#fcfcfc] text-muted-foreground font-semibold uppercase tracking-wider">
             <tr>
               <th className="p-3.5">Customer Details</th>
@@ -203,6 +199,7 @@ export function CareListClient({
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Claim Submission Modal Dialog */}
       {selectedSub && (
