@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import { Shield } from "lucide-react";
 import { listAdminSubscriptions } from "@/actions/admin/care";
+import { createClient } from "@/lib/supabase/server";
 import { CareListClient } from "./care-list-client";
 
 export const metadata: Metadata = {
@@ -8,7 +10,14 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminCarePage() {
-  const subscriptions = await listAdminSubscriptions();
+  const supabase = await createClient();
+
+  const [subscriptions, { data: tiers }] = await Promise.all([
+    listAdminSubscriptions(),
+    (supabase.from("care_tiers") as any).select("*").order("price", { ascending: true })
+  ]);
+
+  const displayTiers = tiers ?? [];
 
   return (
     <div className="space-y-6">
@@ -23,7 +32,7 @@ export default async function AdminCarePage() {
         </div>
       </div>
 
-      <CareListClient initialItems={subscriptions} />
+      <CareListClient initialItems={subscriptions} initialTiers={displayTiers} />
     </div>
   );
 }

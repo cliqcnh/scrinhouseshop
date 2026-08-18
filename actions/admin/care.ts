@@ -212,3 +212,24 @@ export async function registerCareClaim(
     excessPaid,
   };
 }
+
+export async function updateCareTierSettings(
+  tierId: string,
+  name: string,
+  price: number
+): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error } = await (supabase.from("care_tiers") as any)
+    .update({ name: name.trim(), price: Number(price) })
+    .eq("id", tierId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin/care");
+  revalidatePath("/care");
+  return { success: true };
+}

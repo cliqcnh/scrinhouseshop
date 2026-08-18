@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Sparkles, Check, AlertCircle } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/utils/format";
 
@@ -38,9 +38,6 @@ export default async function CarePage() {
         
         {/* Header */}
         <div className="mx-auto max-w-3xl text-center mb-16">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 rounded-none mb-4">
-            <Sparkles className="size-3.5" /> ScrinHouse Care
-          </span>
           <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
             Phone Protection Subscription
           </h1>
