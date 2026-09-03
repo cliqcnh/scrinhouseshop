@@ -11,6 +11,7 @@ export const TELEGRAM_ADMIN_IDS = (process.env.TELEGRAM_ADMIN_IDS || "")
   .filter(Boolean);
 
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+export const NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
 export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 export function validateConfig() {
@@ -20,7 +21,7 @@ export function validateConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    console.warn("⚠️ Warning: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.");
+    console.warn("⚠️ Warning: NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) or SUPABASE_SERVICE_ROLE_KEY is missing.");
   }
 }
 
