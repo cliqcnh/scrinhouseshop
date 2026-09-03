@@ -17,6 +17,7 @@ export interface TelegramAuction {
   product_id: string | null;
   title: string;
   description: string | null;
+  images: string[];
   starting_price: number;
   minimum_increment: number;
   current_bid: number;
@@ -26,6 +27,8 @@ export interface TelegramAuction {
   status: "upcoming" | "active" | "paused" | "ended" | "cancelled";
   anti_snipe_enabled: boolean;
   extension_minutes: number;
+  channel_message_id: number | null;
+  channel_chat_id: string | null;
   created_at: string;
   updated_at: string;
   current_bidder?: TelegramAuctionUser | null;
@@ -57,4 +60,17 @@ export interface TelegramAuctionWinner {
   created_at: string;
   auction?: TelegramAuction | null;
   bidder?: TelegramAuctionUser | null;
+}
+
+export interface TelegramAuctionParticipant {
+  id: string;
+  auction_id: string;
+  auction_user_id: string;
+  telegram_id: number;
+  joined_at: string;
+  first_bid_at: string | null;
+  last_bid_at: string | null;
+  bid_count: number;
+  status: "joined" | "active_bidder" | "winner" | "outbid";
+  user?: TelegramAuctionUser | null;
 }

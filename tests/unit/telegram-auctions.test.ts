@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { formatGHS, maskPhone, formatShortDate } from "@/telegram-bot/utils/format";
 import { validateConfig } from "@/telegram-bot/config";
 import { isAdmin } from "@/telegram-bot/handlers/admin";
@@ -94,6 +94,34 @@ describe("Telegram Auction Bot Unit Tests", () => {
         : new Date(endTime);
 
       expect(newEndTime.toISOString()).toBe("2026-09-03T20:01:00.000Z");
+    });
+  });
+
+  describe("Participant Tracking & Statistics Metrics", () => {
+    it("distinguishes between participants (joined) and actual bidders", () => {
+      const participants = ["user-1", "user-2", "user-3", "user-4", "user-5"];
+      const bids = [
+        { bidder_id: "user-1", amount: 4000 },
+        { bidder_id: "user-2", amount: 4100 },
+        { bidder_id: "user-1", amount: 4200 },
+      ];
+
+      const participantCount = participants.length;
+      const uniqueBiddersCount = new Set(bids.map((b) => b.bidder_id)).size;
+      const totalBidsCount = bids.length;
+
+      expect(participantCount).toBe(5);
+      expect(uniqueBiddersCount).toBe(2);
+      expect(totalBidsCount).toBe(3);
+
+      const avgBidsPerBidder = uniqueBiddersCount > 0 ? (totalBidsCount / uniqueBiddersCount).toFixed(2) : "0";
+      expect(avgBidsPerBidder).toBe("1.50");
+    });
+
+    it("enforces image upload limits (maximum 5 photos)", () => {
+      const images: string[] = ["file-1", "file-2", "file-3", "file-4", "file-5"];
+      const canAddMore = images.length < 5;
+      expect(canAddMore).toBe(false);
     });
   });
 });

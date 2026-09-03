@@ -13,9 +13,9 @@ const userRegistrationStates = new Map<number, RegistrationState>();
 export function getMainMenuKeyboard() {
   return new Keyboard()
     .text("🔨 Active Auctions").text("📅 Upcoming Auctions").row()
-    .text("💰 My Bids").text("🏆 My Wins").row()
-    .text("👤 My Account").text("📜 Auction Rules").row()
-    .text("💬 Support")
+    .text("🔨 My Auctions").text("💰 My Bids").row()
+    .text("🏆 My Wins").text("👤 My Account").row()
+    .text("📜 Auction Rules").text("💬 Support")
     .resized();
 }
 

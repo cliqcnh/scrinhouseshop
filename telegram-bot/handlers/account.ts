@@ -4,6 +4,9 @@ import { formatGHS, maskPhone } from "../utils/format";
 import { TelegramAuctionUser } from "../types";
 
 export function registerAccountHandlers(bot: Bot) {
+  bot.hears("🔨 My Auctions", handleMyAuctions);
+  bot.command("myauctions", handleMyAuctions);
+
   bot.hears("💰 My Bids", handleMyBids);
   bot.command("mybids", handleMyBids);
 
@@ -18,6 +21,87 @@ export function registerAccountHandlers(bot: Bot) {
 
   bot.hears("💬 Support", handleSupport);
   bot.command("support", handleSupport);
+}
+
+async function handleMyAuctions(ctx: any) {
+  const telegramId = ctx.from?.id;
+  if (!telegramId) return;
+
+  const supabase = getBotSupabaseClient();
+  const { data: user } = await supabase
+    .from("telegram_auction_users")
+    .select("*")
+    .eq("telegram_id", telegramId)
+    .maybeSingle();
+
+  if (!user) {
+    await ctx.reply("⚠️ You are not registered yet. Send /start to register.");
+    return;
+  }
+
+  // Fetch participants joined auctions
+  const { data: participants, error } = await supabase
+    .from("telegram_auction_participants")
+    .select(`
+      joined_at, bid_count,
+      auction:auction_id (
+        id, auction_number, title, current_bid, current_bidder_id, status
+      )
+    `)
+    .eq("auction_user_id", user.id)
+    .order("joined_at", { ascending: false });
+
+  if (error || !participants || participants.length === 0) {
+    await ctx.reply(
+      "🔨 **MY AUCTIONS**\n\n" +
+      "You have not joined any auctions yet.\n" +
+      "Browse 🔨 **Active Auctions** and tap **JOIN AUCTION** to get started!"
+    );
+    return;
+  }
+
+  // Fetch user's bids across auctions
+  const { data: userBids } = await supabase
+    .from("telegram_auction_bids")
+    .select("auction_id, amount")
+    .eq("bidder_id", user.id);
+
+  let text = "🔨 **MY AUCTIONS**\n\n";
+  for (const p of participants as any[]) {
+    const auc = Array.isArray(p.auction) ? p.auction[0] : p.auction;
+    if (!auc) continue;
+
+    const bidsForAuction = userBids?.filter((b) => b.auction_id === auc.id) || [];
+    const highestUserBid = bidsForAuction.length > 0 ? Math.max(...bidsForAuction.map((b) => Number(b.amount))) : 0;
+
+    const isHighest = auc.current_bidder_id === user.id;
+    const isActive = auc.status === "active";
+    const statusIcon = isActive ? "🟢" : "🔴";
+    const statusText = !isActive
+      ? "CLOSED"
+      : isHighest
+      ? "HIGHEST BIDDER"
+      : highestUserBid > 0
+      ? "OUTBID"
+      : "JOINED (No Bids)";
+
+    text +=
+      `${statusIcon} **#${auc.auction_number} — ${auc.title}**\n` +
+      `Current Bid: ${formatGHS(Number(auc.current_bid))}\n` +
+      `Your Highest Bid: ${highestUserBid > 0 ? formatGHS(highestUserBid) : "None"}\n` +
+      `Status: **${statusText}**\n` +
+      `-----------------------------\n`;
+
+    if (isActive && !isHighest) {
+      const keyboard = new InlineKeyboard().text("🔥 BID NOW", `bid_select_${auc.id}`);
+      await ctx.reply(text, { parse_mode: "Markdown", reply_markup: keyboard });
+      text = "";
+    }
+  }
+
+  if (text.trim().length > 0) {
+    await ctx.reply(text, { parse_mode: "Markdown" });
+  }
 }
 
 async function handleMyBids(ctx: any) {
@@ -171,7 +255,8 @@ async function handleMyAccount(ctx: any) {
   const activeAuctionIds = new Set<string>();
   if (activeBids) {
     for (const b of activeBids as any[]) {
-      if (b.auction?.status === "active") {
+      const auc = Array.isArray(b.auction) ? b.auction[0] : b.auction;
+      if (auc?.status === "active") {
         activeAuctionIds.add(b.auction_id);
       }
     }

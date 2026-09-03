@@ -6,9 +6,11 @@ import { processEndedAuctions } from "../services/auction-closer";
 
 // Admin creation state map
 interface CreateAuctionWizardState {
-  step: "select_product" | "input_title" | "input_starting_price" | "input_min_increment" | "input_duration_hours";
+  step: "select_product" | "input_title" | "input_description" | "upload_images" | "input_starting_price" | "input_min_increment" | "input_duration_hours";
   productId?: string | null;
   title?: string;
+  description?: string;
+  images: string[];
   startingPrice?: number;
   minIncrement?: number;
 }
@@ -25,7 +27,7 @@ export function isAdmin(telegramId: number | undefined): boolean {
 }
 
 export function registerAdminHandlers(bot: Bot) {
-  // Guard command for admin help
+  // Admin help command
   bot.command("admin", async (ctx) => {
     if (!isAdmin(ctx.from?.id)) {
       await ctx.reply("❌ Unauthorized admin access.");
@@ -34,13 +36,15 @@ export function registerAdminHandlers(bot: Bot) {
 
     const adminHelpText =
       `🔑 **ADMIN AUCTION COMMANDS**\n\n` +
-      `/createauction — Create a new auction\n` +
+      `/createauction — Create a new auction with photos & description\n` +
       `/auctions — List & manage all auctions\n` +
-      `/publishchannel <auction_number> — Publish auction post to Telegram channel\n` +
-      `/bids <auction_number> — View bid history\n` +
+      `/publishchannel <auction_number> — Publish auction to Telegram channel\n` +
+      `/participants — View participant list & bidder stats\n` +
+      `/auctionstats — Detailed auction analytics & metrics\n` +
+      `/bids <auction_number> — View complete bid log\n` +
       `/endauction <auction_number> — Manually close auction & pick winner\n` +
       `/cancelauction <auction_number> — Cancel an auction\n` +
-      `/winner <auction_number> — View winning details\n` +
+      `/winner <auction_number> — View winning bidder details\n` +
       `/users — List registered bidders`;
 
     await ctx.reply(adminHelpText, { parse_mode: "Markdown" });
@@ -68,7 +72,7 @@ export function registerAdminHandlers(bot: Bot) {
     }
     keyboard.text("Custom Product Title", "admin_prod_custom");
 
-    adminWizards.set(ctx.from!.id, { step: "select_product" });
+    adminWizards.set(ctx.from!.id, { step: "select_product", images: [] });
 
     await ctx.reply("🔨 **CREATE NEW AUCTION**\n\nSelect a product from Scrinhouse inventory or choose custom title:", {
       reply_markup: keyboard,
@@ -81,7 +85,7 @@ export function registerAdminHandlers(bot: Bot) {
     if (!adminId || !isAdmin(adminId)) return;
 
     const prodId = ctx.match[1];
-    const wizard = adminWizards.get(adminId) || { step: "select_product" };
+    const wizard = adminWizards.get(adminId) || { step: "select_product", images: [] };
 
     if (prodId === "custom") {
       wizard.step = "input_title";
@@ -94,21 +98,72 @@ export function registerAdminHandlers(bot: Bot) {
       if (prod) {
         wizard.productId = prod.id;
         wizard.title = prod.name;
+        wizard.description = prod.description || `${prod.name} in ${prod.condition || "great"} condition.`;
         wizard.startingPrice = Math.floor(Number(prod.base_price) * 0.7); // default starting price ~70% of base
-        wizard.step = "input_starting_price";
+        wizard.step = "input_description";
         adminWizards.set(adminId, wizard);
 
         await ctx.reply(
           `Selected: **${prod.name}**\n\n` +
-          `Suggested Starting Price: GH₵${wizard.startingPrice}\n` +
-          `Please reply with your desired **Starting Price** in GH₵:`
+          `Please enter/confirm the **Detailed Description** for this auction (or send \`skip\` to use existing):`
         );
       }
     }
     await ctx.answerCallbackQuery();
   });
 
-  // Message listener for wizard inputs
+  // Photo listener for image uploads during wizard
+  bot.on("message:photo", async (ctx, next) => {
+    const adminId = ctx.from?.id;
+    if (!adminId || !isAdmin(adminId)) return next();
+
+    const wizard = adminWizards.get(adminId);
+    if (!wizard || wizard.step !== "upload_images") return next();
+
+    const photos = ctx.message.photo;
+    if (!photos || photos.length === 0) return next();
+
+    // Get highest resolution photo file_id
+    const fileId = photos[photos.length - 1].file_id;
+
+    if (wizard.images.length >= 5) {
+      await ctx.reply("⚠️ Maximum 5 images reached per auction.");
+      return;
+    }
+
+    wizard.images.push(fileId);
+    adminWizards.set(adminId, wizard);
+
+    const keyboard = new InlineKeyboard()
+      .text("✅ DONE WITH IMAGES", "admin_images_done")
+      .text("⏭️ SKIP IMAGES", "admin_images_done");
+
+    await ctx.reply(
+      `📸 Image ${wizard.images.length}/5 received!\n\n` +
+      `Send another photo or tap **DONE WITH IMAGES** when finished:`,
+      { reply_markup: keyboard }
+    );
+  });
+
+  // Callback for finishing image uploads
+  bot.callbackQuery("admin_images_done", async (ctx) => {
+    const adminId = ctx.from?.id;
+    if (!adminId || !isAdmin(adminId)) return;
+
+    const wizard = adminWizards.get(adminId);
+    if (wizard && wizard.step === "upload_images") {
+      wizard.step = "input_starting_price";
+      adminWizards.set(adminId, wizard);
+
+      await ctx.reply(
+        `Images recorded: **${wizard.images.length}**\n\n` +
+        `Now enter the desired **Starting Price** in GH₵ (e.g. 4000):`
+      );
+    }
+    await ctx.answerCallbackQuery();
+  });
+
+  // Message listener for wizard text inputs
   bot.on("message:text", async (ctx, next) => {
     const adminId = ctx.from?.id;
     if (!adminId || !isAdmin(adminId)) return next();
@@ -120,9 +175,29 @@ export function registerAdminHandlers(bot: Bot) {
 
     if (wizard.step === "input_title") {
       wizard.title = text;
-      wizard.step = "input_starting_price";
+      wizard.step = "input_description";
       adminWizards.set(adminId, wizard);
-      await ctx.reply("Great! Now enter the **Starting Price** in GH₵ (e.g. 4000):");
+      await ctx.reply("Great! Now enter the **Detailed Description** for this auction:");
+      return;
+    }
+
+    if (wizard.step === "input_description") {
+      if (text.toLowerCase() !== "skip") {
+        wizard.description = text;
+      }
+      wizard.step = "upload_images";
+      adminWizards.set(adminId, wizard);
+
+      const keyboard = new InlineKeyboard()
+        .text("✅ DONE WITH IMAGES", "admin_images_done")
+        .text("⏭️ SKIP IMAGES", "admin_images_done");
+
+      await ctx.reply(
+        "📸 **Upload Product Images**\n\n" +
+        "You can send 1 to 5 product photos now.\n" +
+        "When finished, tap **DONE WITH IMAGES** or **SKIP IMAGES**:",
+        { reply_markup: keyboard }
+      );
       return;
     }
 
@@ -176,6 +251,8 @@ export function registerAdminHandlers(bot: Bot) {
           auction_number: auctionNum,
           product_id: wizard.productId || null,
           title: wizard.title || "Scrinhouse Item",
+          description: wizard.description || "High quality device tested by Scrinhouse.",
+          images: wizard.images || [],
           starting_price: wizard.startingPrice || 1000,
           minimum_increment: wizard.minIncrement || 100,
           current_bid: 0,
@@ -198,6 +275,7 @@ export function registerAdminHandlers(bot: Bot) {
         `✅ **AUCTION CREATED & ACTIVATED!**\n\n` +
         `Auction Number: **#${newAuction.auction_number}**\n` +
         `Item: **${newAuction.title}**\n` +
+        `Images: **${newAuction.images?.length || 0}**\n` +
         `Starting Price: **${formatGHS(Number(newAuction.starting_price))}**\n` +
         `Min Increment: **${formatGHS(Number(newAuction.minimum_increment))}**\n` +
         `End Time: **${formatShortDate(newAuction.end_time)}**\n\n` +
@@ -236,7 +314,7 @@ export function registerAdminHandlers(bot: Bot) {
         `#${a.auction_number} | **${a.title}**\n` +
         `Status: ${a.status.toUpperCase()} | Current Bid: ${formatGHS(Number(a.current_bid))}\n` +
         `Ends: ${formatShortDate(a.end_time)}\n` +
-        `Commands: /endauction ${a.auction_number} | /cancelauction ${a.auction_number}\n\n`;
+        `Commands: /publishchannel ${a.auction_number} | /participants ${a.auction_number} | /auctionstats ${a.auction_number}\n\n`;
     }
 
     await ctx.reply(text, { parse_mode: "Markdown" });
@@ -272,28 +350,160 @@ export function registerAdminHandlers(bot: Bot) {
     const botUsername = ctx.me.username;
     const startUrl = `https://t.me/${botUsername}?start=bid_${auction.id}`;
 
+    // Get participant & bidder counts
+    const { count: participantCount } = await supabase
+      .from("telegram_auction_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("auction_id", auction.id);
+
+    const { data: bids } = await supabase
+      .from("telegram_auction_bids")
+      .select("bidder_id")
+      .eq("auction_id", auction.id);
+
+    const uniqueBiddersCount = new Set(bids?.map((b) => b.bidder_id) || []).size;
+    const currentBid = Number(auction.current_bid);
+    const minIncrement = Number(auction.minimum_increment);
+    const startingPrice = Number(auction.starting_price);
+    const nextMinBid = currentBid === 0 ? startingPrice : currentBid + minIncrement;
+    const desc = auction.description || "Very good condition. Tested and verified by Scrinhouse.";
+
     const channelPost =
       `🔨 **SCRINHOUSE AUCTION #${auction.auction_number}**\n\n` +
       `📱 **${auction.title}**\n\n` +
-      `💰 Starting Bid: **${formatGHS(Number(auction.starting_price))}**\n` +
-      `📈 Minimum Increase: **${formatGHS(Number(auction.minimum_increment))}**\n` +
-      `⏰ Ends: **${formatShortDate(auction.end_time)}**\n\n` +
-      `Click below to place your bids directly in the bot!`;
+      `📋 **DESCRIPTION**\n` +
+      `${desc}\n\n` +
+      `💰 Starting Bid: **${formatGHS(startingPrice)}**\n` +
+      `🔥 Current Bid: **${currentBid === 0 ? "No bids yet" : formatGHS(currentBid)}**\n` +
+      `📈 Minimum Next Bid: **${formatGHS(nextMinBid)}**\n\n` +
+      `👥 Joined: **${participantCount || 0}**\n` +
+      `🔥 Bidders: **${uniqueBiddersCount}**\n\n` +
+      `⏰ Ends: **${formatShortDate(auction.end_time)}**`;
 
     const keyboard = new InlineKeyboard()
+      .url("🔨 JOIN AUCTION", startUrl)
       .url("🔥 BID NOW", startUrl)
-      .url("📋 AUCTION DETAILS", startUrl);
+      .row()
+      .url("📋 FULL DETAILS", startUrl);
 
     try {
-      await bot.api.sendMessage(TELEGRAM_AUCTION_CHANNEL_ID, channelPost, {
-        parse_mode: "Markdown",
-        reply_markup: keyboard,
-      });
-      await ctx.reply(`✅ Successfully published Auction #${auction.auction_number} to channel ${TELEGRAM_AUCTION_CHANNEL_ID}!`);
+      let sentMsg: any;
+      if (auction.images && auction.images.length > 0) {
+        sentMsg = await bot.api.sendPhoto(TELEGRAM_AUCTION_CHANNEL_ID, auction.images[0], {
+          caption: channelPost,
+          parse_mode: "Markdown",
+          reply_markup: keyboard,
+        });
+      } else {
+        sentMsg = await bot.api.sendMessage(TELEGRAM_AUCTION_CHANNEL_ID, channelPost, {
+          parse_mode: "Markdown",
+          reply_markup: keyboard,
+        });
+      }
+
+      // Save channel_message_id to database for live updates on new bids
+      if (sentMsg && sentMsg.message_id) {
+        await supabase
+          .from("telegram_auctions")
+          .update({
+            channel_message_id: sentMsg.message_id,
+            channel_chat_id: TELEGRAM_AUCTION_CHANNEL_ID,
+          })
+          .eq("id", auction.id);
+      }
+
+      await ctx.reply(`✅ Successfully published Auction #${auction.auction_number} to channel! Live updates enabled.`);
     } catch (err) {
       console.error("Failed to post to channel:", err);
       await ctx.reply(`❌ Failed to publish to channel: ${err instanceof Error ? err.message : err}`);
     }
+  });
+
+  // /participants <auction_number> [page]
+  bot.command("participants", async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) {
+      await ctx.reply("❌ Unauthorized admin access.");
+      return;
+    }
+
+    const args = ctx.match.trim().split(" ");
+    const auctionNum = args[0];
+    const page = Math.max(1, parseInt(args[1] || "1", 10));
+
+    const supabase = getBotSupabaseClient();
+
+    if (!auctionNum) {
+      // List active auctions to choose from
+      const { data: activeAuctions } = await supabase
+        .from("telegram_auctions")
+        .select("auction_number, title")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (!activeAuctions || activeAuctions.length === 0) {
+        await ctx.reply("No auctions found.");
+        return;
+      }
+
+      const keyboard = new InlineKeyboard();
+      for (const a of activeAuctions) {
+        keyboard.text(`🔨 #${a.auction_number} — ${a.title}`, `admin_parts_${a.auction_number}_1`).row();
+      }
+
+      await ctx.reply("👥 **SELECT AUCTION TO VIEW PARTICIPANTS**", { reply_markup: keyboard });
+      return;
+    }
+
+    await renderParticipantsList(ctx, auctionNum, page);
+  });
+
+  bot.callbackQuery(/^admin_parts_(.+)_(.+)$/, async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) return;
+    const auctionNum = ctx.match[1];
+    const page = parseInt(ctx.match[2], 10);
+    await renderParticipantsList(ctx, auctionNum, page);
+    await ctx.answerCallbackQuery();
+  });
+
+  // /auctionstats <auction_number>
+  bot.command("auctionstats", async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) {
+      await ctx.reply("❌ Unauthorized admin access.");
+      return;
+    }
+
+    const auctionNum = ctx.match.trim();
+    const supabase = getBotSupabaseClient();
+
+    if (!auctionNum) {
+      const { data: activeAuctions } = await supabase
+        .from("telegram_auctions")
+        .select("auction_number, title")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (!activeAuctions || activeAuctions.length === 0) {
+        await ctx.reply("No auctions found.");
+        return;
+      }
+
+      const keyboard = new InlineKeyboard();
+      for (const a of activeAuctions) {
+        keyboard.text(`📊 #${a.auction_number} — ${a.title}`, `admin_stats_${a.auction_number}`).row();
+      }
+
+      await ctx.reply("📊 **SELECT AUCTION TO VIEW STATISTICS**", { reply_markup: keyboard });
+      return;
+    }
+
+    await renderAuctionStats(ctx, auctionNum);
+  });
+
+  bot.callbackQuery(/^admin_stats_(.+)$/, async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) return;
+    const auctionNum = ctx.match[1];
+    await renderAuctionStats(ctx, auctionNum);
+    await ctx.answerCallbackQuery();
   });
 
   // /endauction <auction_number>
@@ -366,7 +576,8 @@ export function registerAdminHandlers(bot: Bot) {
 
     let msg = `📜 **BIDS FOR AUCTION #${num} (${auction.title})**\n\n`;
     for (const b of bids as any[]) {
-      msg += `• ${formatGHS(Number(b.amount))} by ${b.bidder?.full_name} (${b.bidder?.bidder_id}) at ${formatShortDate(b.created_at)}\n`;
+      const bidder = Array.isArray(b.bidder) ? b.bidder[0] : b.bidder;
+      msg += `• ${formatGHS(Number(b.amount))} by ${bidder?.full_name || "Bidder"} (${bidder?.bidder_id || "SRH"}) at ${formatShortDate(b.created_at)}\n`;
     }
 
     await ctx.reply(msg, { parse_mode: "Markdown" });
@@ -429,4 +640,134 @@ export function registerAdminHandlers(bot: Bot) {
 
     await ctx.reply(text, { parse_mode: "Markdown" });
   });
+}
+
+async function renderParticipantsList(ctx: any, auctionNum: string, page: number) {
+  const supabase = getBotSupabaseClient();
+  const { data: auction } = await supabase
+    .from("telegram_auctions")
+    .select("id, auction_number, title")
+    .eq("auction_number", auctionNum)
+    .maybeSingle();
+
+  if (!auction) {
+    await ctx.reply("❌ Auction not found.");
+    return;
+  }
+
+  const pageSize = 5;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data: participants, count: totalParticipants } = await supabase
+    .from("telegram_auction_participants")
+    .select(`
+      joined_at, bid_count, status,
+      user:auction_user_id (id, full_name, bidder_id)
+    `, { count: "exact" })
+    .eq("auction_id", auction.id)
+    .order("joined_at", { ascending: true })
+    .range(from, to);
+
+  const { data: bids } = await supabase
+    .from("telegram_auction_bids")
+    .select("bidder_id, amount")
+    .eq("auction_id", auction.id);
+
+  const totalBids = bids?.length || 0;
+  const uniqueBiddersCount = new Set(bids?.map((b) => b.bidder_id) || []).size;
+
+  let msg =
+    `👥 **AUCTION #${auction.auction_number} PARTICIPANTS**\n\n` +
+    `📱 **${auction.title}**\n\n` +
+    `👥 Participants: **${totalParticipants || 0}**\n` +
+    `🔥 Actual Bidders: **${uniqueBiddersCount}**\n` +
+    `💰 Total Bids: **${totalBids}**\n\n` +
+    `**Participants List (Page ${page}):**\n\n`;
+
+  if (!participants || participants.length === 0) {
+    msg += "No participants joined yet.\n";
+  } else {
+    let index = from + 1;
+    for (const p of participants as any[]) {
+      const u = Array.isArray(p.user) ? p.user[0] : p.user;
+
+      // Find highest bid by this user
+      const userBids = bids?.filter((b) => b.bidder_id === u?.id) || [];
+      const highestBid = userBids.length > 0 ? Math.max(...userBids.map((b) => Number(b.amount))) : 0;
+
+      msg +=
+        `${index}. **${u?.bidder_id || "SRH"}** — ${u?.full_name || "Customer"}\n` +
+        `   Joined: ${formatShortDate(p.joined_at)}\n` +
+        `   Bids: ${p.bid_count || 0}\n` +
+        `   Highest Bid: ${highestBid > 0 ? formatGHS(highestBid) : "No bids yet"}\n\n`;
+      index++;
+    }
+  }
+
+  const keyboard = new InlineKeyboard();
+  if (page > 1) {
+    keyboard.text("⬅️ PREVIOUS", `admin_parts_${auctionNum}_${page - 1}`);
+  }
+  if (totalParticipants && to < totalParticipants - 1) {
+    keyboard.text("NEXT ➡️", `admin_parts_${auctionNum}_${page + 1}`);
+  }
+
+  await ctx.reply(msg, { parse_mode: "Markdown", reply_markup: keyboard });
+}
+
+async function renderAuctionStats(ctx: any, auctionNum: string) {
+  const supabase = getBotSupabaseClient();
+  const { data: auction } = await supabase
+    .from("telegram_auctions")
+    .select(`
+      *,
+      current_bidder:current_bidder_id(full_name, bidder_id)
+    `)
+    .eq("auction_number", auctionNum)
+    .maybeSingle();
+
+  if (!auction) {
+    await ctx.reply("❌ Auction not found.");
+    return;
+  }
+
+  const { count: participantCount } = await supabase
+    .from("telegram_auction_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("auction_id", auction.id);
+
+  const { data: bids } = await supabase
+    .from("telegram_auction_bids")
+    .select("bidder_id, amount")
+    .eq("auction_id", auction.id);
+
+  const totalBids = bids?.length || 0;
+  const uniqueBiddersCount = new Set(bids?.map((b) => b.bidder_id) || []).size;
+  const avgBidsPerBidder = uniqueBiddersCount > 0 ? (totalBids / uniqueBiddersCount).toFixed(2) : "0";
+
+  const currentBid = Number(auction.current_bid);
+  const minIncrement = Number(auction.minimum_increment);
+  const startingPrice = Number(auction.starting_price);
+  const nextMinBid = currentBid === 0 ? startingPrice : currentBid + minIncrement;
+
+  const currentBidderObj = Array.isArray(auction.current_bidder) ? auction.current_bidder[0] : auction.current_bidder;
+  const highestBidderText = currentBidderObj ? `${currentBidderObj.bidder_id} (${currentBidderObj.full_name})` : "None yet";
+
+  const msg =
+    `📊 **AUCTION #${auction.auction_number} STATISTICS**\n\n` +
+    `📱 **${auction.title}**\n\n` +
+    `👥 Participants: **${participantCount || 0}**\n` +
+    `🔥 Actual Bidders: **${uniqueBiddersCount}**\n` +
+    `💰 Total Bids: **${totalBids}**\n\n` +
+    `💵 Starting Bid: **${formatGHS(startingPrice)}**\n` +
+    `🔥 Current Bid: **${currentBid === 0 ? "No bids yet" : formatGHS(currentBid)}**\n` +
+    `📈 Minimum Next Bid: **${formatGHS(nextMinBid)}**\n\n` +
+    `🏆 Current Highest Bidder: **${highestBidderText}**\n\n` +
+    `⏰ Ends: **${formatShortDate(auction.end_time)}**\n` +
+    `🔨 Status: **${auction.status.toUpperCase()}**\n\n` +
+    `⏱️ Anti-Sniping Extensions: **${auction.anti_snipe_enabled ? `${auction.extension_minutes} mins` : "Disabled"}**\n` +
+    `📈 Avg Bids per Bidder: **${avgBidsPerBidder}**`;
+
+  await ctx.reply(msg, { parse_mode: "Markdown" });
 }

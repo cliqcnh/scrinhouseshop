@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard } from "grammy";
+import { Bot, InlineKeyboard, InputMediaBuilder } from "grammy";
 import { getBotSupabaseClient } from "../supabase";
 import { formatGHS, formatShortDate } from "../utils/format";
 import { TelegramAuction, TelegramAuctionUser } from "../types";
@@ -15,6 +15,16 @@ export function registerAuctionHandlers(bot: Bot) {
   // Handler for "📅 Upcoming Auctions" button and /upcoming command
   bot.hears("📅 Upcoming Auctions", handleUpcomingAuctions);
   bot.command("upcoming", handleUpcomingAuctions);
+
+  // Callback query for JOIN AUCTION: join_auction_<auctionId>
+  bot.callbackQuery(/^join_auction_(.+)$/, async (ctx) => {
+    const auctionId = ctx.match[1];
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+
+    await handleJoinAuction(bot, ctx, telegramId, auctionId);
+    await ctx.answerCallbackQuery();
+  });
 
   // Callback query for viewing details: details_<auctionId>
   bot.callbackQuery(/^details_(.+)$/, async (ctx) => {
@@ -117,6 +127,78 @@ export function registerAuctionHandlers(bot: Bot) {
   });
 }
 
+async function handleJoinAuction(
+  bot: Bot,
+  ctx: any,
+  telegramId: number,
+  auctionId: string
+) {
+  const supabase = getBotSupabaseClient();
+
+  // 1. Verify user registration
+  const { data: user } = await supabase
+    .from("telegram_auction_users")
+    .select("*")
+    .eq("telegram_id", telegramId)
+    .maybeSingle();
+
+  if (!user) {
+    await ctx.reply(
+      "⚠️ You must complete registration before joining auctions.\n\n" +
+      "Send /start to register in 10 seconds!"
+    );
+    return;
+  }
+
+  // 2. Fetch auction
+  const { data: auction } = await supabase
+    .from("telegram_auctions")
+    .select("*")
+    .eq("id", auctionId)
+    .maybeSingle();
+
+  if (!auction) {
+    await ctx.reply("❌ Auction not found.");
+    return;
+  }
+
+  // 3. Upsert participant record to prevent duplicates
+  const { error } = await supabase
+    .from("telegram_auction_participants")
+    .upsert(
+      {
+        auction_id: auctionId,
+        auction_user_id: user.id,
+        telegram_id: telegramId,
+        status: "joined",
+      },
+      { onConflict: "auction_id,auction_user_id" }
+    );
+
+  if (error) {
+    console.error("Error joining auction:", error);
+  }
+
+  // 4. Update channel stats
+  await updateChannelAuctionMessage(bot, auctionId);
+
+  // 5. Send confirmation message
+  const confirmationMsg =
+    `✅ **YOU'RE IN!**\n\n` +
+    `You have joined:\n\n` +
+    `🔨 **Scrinhouse Auction #${auction.auction_number}**\n` +
+    `📱 **${auction.title}**\n\n` +
+    `👤 Bidder ID: **${user.bidder_id}**\n\n` +
+    `You will now receive live auction notifications for this deal.\n\n` +
+    `Good luck! 🔥`;
+
+  const keyboard = new InlineKeyboard()
+    .text("🔥 BID NOW", `bid_select_${auctionId}`)
+    .text("📋 FULL DETAILS", `details_${auctionId}`);
+
+  await ctx.reply(confirmationMsg, { parse_mode: "Markdown", reply_markup: keyboard });
+}
+
 async function handleActiveAuctions(ctx: any) {
   const supabase = getBotSupabaseClient();
   const now = new Date().toISOString();
@@ -202,8 +284,24 @@ async function renderSingleAuction(ctx: any, auction: TelegramAuction) {
     `${formatShortDate(auction.end_time)}`;
 
   const keyboard = new InlineKeyboard()
+    .text("🔨 JOIN AUCTION", `join_auction_${auction.id}`)
     .text("🔥 BID NOW", `bid_select_${auction.id}`)
-    .text("📋 DETAILS", `details_${auction.id}`);
+    .row()
+    .text("📋 FULL DETAILS", `details_${auction.id}`);
+
+  // Send photo if available
+  if (auction.images && auction.images.length > 0) {
+    try {
+      await ctx.replyWithPhoto(auction.images[0], {
+        caption: cardText,
+        parse_mode: "Markdown",
+        reply_markup: keyboard,
+      });
+      return;
+    } catch (err) {
+      console.warn("Failed to send auction image photo:", err);
+    }
+  }
 
   await ctx.reply(cardText, { parse_mode: "Markdown", reply_markup: keyboard });
 }
@@ -221,15 +319,55 @@ async function renderAuctionDetails(ctx: any, auctionId: string) {
 
   if (!auction) return;
 
-  const desc = auction.description || auction.products?.description || "High quality device tested and verified by Scrinhouse technicians.";
-  const msg =
-    `📋 **AUCTION #${auction.auction_number} DETAILS**\n\n` +
-    `📱 **${auction.title}**\n` +
-    `Description: ${desc}\n\n` +
-    `Anti-Sniping: ${auction.anti_snipe_enabled ? `Enabled (${auction.extension_minutes} mins auto-extend)` : "Disabled"}\n` +
-    `Minimum Increments: ${formatGHS(Number(auction.minimum_increment))}`;
+  // Calculate stats
+  const { count: participantCount } = await supabase
+    .from("telegram_auction_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("auction_id", auctionId);
 
-  const keyboard = new InlineKeyboard().text("🔥 BID NOW", `bid_select_${auction.id}`);
+  const { data: bids } = await supabase
+    .from("telegram_auction_bids")
+    .select("bidder_id")
+    .eq("auction_id", auctionId);
+
+  const uniqueBiddersCount = new Set(bids?.map((b) => b.bidder_id) || []).size;
+
+  const currentBid = Number(auction.current_bid);
+  const minIncrement = Number(auction.minimum_increment);
+  const startingPrice = Number(auction.starting_price);
+  const nextMinBid = currentBid === 0 ? startingPrice : currentBid + minIncrement;
+  const desc = auction.description || auction.products?.description || "High quality device tested and verified by Scrinhouse technicians.";
+
+  const msg =
+    `🔨 **SCRINHOUSE AUCTION #${auction.auction_number}**\n\n` +
+    `📱 **${auction.title}**\n\n` +
+    `📋 **Description:**\n${desc}\n\n` +
+    `💰 Starting Bid: **${formatGHS(startingPrice)}**\n` +
+    `🔥 Current Bid: **${currentBid === 0 ? "No bids yet" : formatGHS(currentBid)}**\n` +
+    `📈 Minimum Next Bid: **${formatGHS(nextMinBid)}**\n\n` +
+    `👥 Participants: **${participantCount || 0}**\n` +
+    `🔥 Actual Bidders: **${uniqueBiddersCount}**\n\n` +
+    `⏰ Closing: **${formatShortDate(auction.end_time)}**\n\n` +
+    `Anti-Sniping: ${auction.anti_snipe_enabled ? `Enabled (${auction.extension_minutes}-min auto-extension)` : "Disabled"}`;
+
+  const keyboard = new InlineKeyboard()
+    .text("🔨 JOIN AUCTION", `join_auction_${auction.id}`)
+    .text("🔥 BID NOW", `bid_select_${auction.id}`);
+
+  // Send photo gallery if images exist
+  if (auction.images && auction.images.length > 0 && ctx.replyWithPhoto) {
+    try {
+      await ctx.replyWithPhoto(auction.images[0], {
+        caption: msg,
+        parse_mode: "Markdown",
+        reply_markup: keyboard,
+      });
+      return;
+    } catch (err) {
+      // Fallback to text
+    }
+  }
+
   await ctx.reply(msg, { parse_mode: "Markdown", reply_markup: keyboard });
 }
 
@@ -268,15 +406,22 @@ async function executeBidPlacement(
   }
 
   // Success response
-  await ctx.reply(
+  let successMsg =
     `✅ **BID ACCEPTED**\n\n` +
     `Auction Bid Accepted!\n` +
     `Your bid: **${formatGHS(amount)}**\n\n` +
-    `You are currently the highest bidder! 🏆`,
-    { parse_mode: "Markdown" }
-  );
+    `You are currently the highest bidder! 🏆`;
 
-  // If previous bidder exists and was outbid by this new bid, send outbid notification
+  if (result.extended) {
+    successMsg += `\n\n⏰ **AUCTION EXTENDED!**\nA last-minute bid extended the auction by ${result.extension_minutes || 2} minutes.`;
+  }
+
+  await ctx.reply(successMsg, { parse_mode: "Markdown" });
+
+  // Update existing channel post live
+  await updateChannelAuctionMessage(bot, auctionId);
+
+  // Send outbid notification to previous highest bidder
   if (result.previous_bidder_id && result.previous_bidder_id !== user.id) {
     const { data: auction } = await supabase
       .from("telegram_auctions")
@@ -294,5 +439,84 @@ async function executeBidPlacement(
         auction.title
       );
     }
+  }
+}
+
+export async function updateChannelAuctionMessage(bot: Bot, auctionId: string) {
+  const supabase = getBotSupabaseClient();
+  const { data: auction } = await supabase
+    .from("telegram_auctions")
+    .select("*")
+    .eq("id", auctionId)
+    .maybeSingle();
+
+  if (!auction || !auction.channel_message_id || !auction.channel_chat_id) {
+    return;
+  }
+
+  // Count participants & unique bidders
+  const { count: participantCount } = await supabase
+    .from("telegram_auction_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("auction_id", auctionId);
+
+  const { data: bids } = await supabase
+    .from("telegram_auction_bids")
+    .select("bidder_id")
+    .eq("auction_id", auctionId);
+
+  const uniqueBiddersCount = new Set(bids?.map((b) => b.bidder_id) || []).size;
+
+  const currentBid = Number(auction.current_bid);
+  const minIncrement = Number(auction.minimum_increment);
+  const startingPrice = Number(auction.starting_price);
+  const nextMinBid = currentBid === 0 ? startingPrice : currentBid + minIncrement;
+  const desc = auction.description || "Very good condition. Verified by Scrinhouse.";
+
+  const channelText =
+    `🔨 **SCRINHOUSE AUCTION #${auction.auction_number}**\n\n` +
+    `📱 **${auction.title}**\n\n` +
+    `📋 **DESCRIPTION**\n` +
+    `${desc}\n\n` +
+    `💰 Starting Bid: **${formatGHS(startingPrice)}**\n` +
+    `🔥 Current Bid: **${currentBid === 0 ? "No bids yet" : formatGHS(currentBid)}**\n` +
+    `📈 Minimum Next Bid: **${formatGHS(nextMinBid)}**\n\n` +
+    `👥 Joined: **${participantCount || 0}**\n` +
+    `🔥 Bidders: **${uniqueBiddersCount}**\n\n` +
+    `⏰ Ends: **${formatShortDate(auction.end_time)}**`;
+
+  const botUsername = bot.botInfo?.username || "ScrinhouseAuctionBot";
+  const startUrl = `https://t.me/${botUsername}?start=bid_${auction.id}`;
+
+  const keyboard = new InlineKeyboard()
+    .url("🔨 JOIN AUCTION", startUrl)
+    .url("🔥 BID NOW", startUrl)
+    .row()
+    .url("📋 FULL DETAILS", startUrl);
+
+  try {
+    if (auction.images && auction.images.length > 0) {
+      await bot.api.editMessageCaption(
+        auction.channel_chat_id,
+        Number(auction.channel_message_id),
+        {
+          caption: channelText,
+          parse_mode: "Markdown",
+          reply_markup: keyboard,
+        }
+      );
+    } else {
+      await bot.api.editMessageText(
+        auction.channel_chat_id,
+        Number(auction.channel_message_id),
+        channelText,
+        {
+          parse_mode: "Markdown",
+          reply_markup: keyboard,
+        }
+      );
+    }
+  } catch (err) {
+    // Ignore message unmodified errors
   }
 }
