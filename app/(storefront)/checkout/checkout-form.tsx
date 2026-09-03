@@ -147,38 +147,50 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
   function handleFileChange(file: File, setter: (val: string) => void) {
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (!e.target?.result) return;
+      const rawDataUrl = e.target?.result as string;
+      if (!rawDataUrl) return;
+
       const img = new window.Image();
       img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
+        try {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
           }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width = Math.round((width * MAX_HEIGHT) / height);
-            height = MAX_HEIGHT;
-          }
-        }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          setter(canvas.toDataURL("image/jpeg", 0.7));
-        } else {
-          setter(e.target?.result as string);
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            setter(canvas.toDataURL("image/jpeg", 0.7));
+          } else {
+            setter(rawDataUrl);
+          }
+        } catch {
+          setter(rawDataUrl);
         }
       };
-      img.src = e.target?.result as string;
+
+      img.onerror = () => {
+        // Fallback to raw FileReader data URL if canvas image loading fails
+        setter(rawDataUrl);
+      };
+
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
   }
@@ -383,8 +395,14 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                   className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-none file:border file:border-border file:bg-white file:text-xs file:font-semibold file:text-foreground hover:file:bg-accent cursor-pointer"
                 />
                 {ghanaCardFrontUrl && (
-                  <div className="mt-2 text-[10px] text-green-600 font-semibold flex items-center gap-1">
-                    ✓ Front card photo attached
+                  <div className="mt-2 space-y-1">
+                    <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1">
+                      ✓ Front card photo attached
+                    </div>
+                    <div className="h-20 w-32 border border-border bg-muted/10 overflow-hidden relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={ghanaCardFrontUrl} alt="Ghana Card Front Preview" className="size-full object-contain" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -405,8 +423,14 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
                   className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-4 file:rounded-none file:border file:border-border file:bg-white file:text-xs file:font-semibold file:text-foreground hover:file:bg-accent cursor-pointer"
                 />
                 {ghanaCardBackUrl && (
-                  <div className="mt-2 text-[10px] text-green-600 font-semibold flex items-center gap-1">
-                    ✓ Back card photo attached
+                  <div className="mt-2 space-y-1">
+                    <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1">
+                      ✓ Back card photo attached
+                    </div>
+                    <div className="h-20 w-32 border border-border bg-muted/10 overflow-hidden relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={ghanaCardBackUrl} alt="Ghana Card Back Preview" className="size-full object-contain" />
+                    </div>
                   </div>
                 )}
               </div>

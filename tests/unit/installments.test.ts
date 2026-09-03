@@ -273,5 +273,61 @@ describe("Installment Financial Math & Server Actions", () => {
         }
       )).rejects.toThrow("Installment payment plan is not enabled for \"Custom iPhone 2\".");
     });
+
+    it("fetches order details with linked Ghana Card photos and installment plan", async () => {
+      const mockOrderData = {
+        id: "order-inst-999",
+        user_id: "user-1",
+        status: "paid",
+        total: 12000,
+        subtotal: 10000,
+        delivery_address: { fullName: "Test User", phone: "0240000000", region: "Greater Accra", city: "Accra" },
+        paystack_channel: "mobile_money",
+        paystack_ref: "REF-999",
+        created_at: "2026-08-30T10:00:00Z",
+        order_items: [
+          { id: "item-1", product_id: "prod-1", product_name: "iPhone 15", variant_label: "128GB Black", quantity: 1, price: 10000 }
+        ]
+      };
+
+      const mockInstData = {
+        id: "inst-app-999",
+        base_price: 10000,
+        total_price: 12000,
+        deposit_amount: 4800,
+        remaining_balance: 7200,
+        ghana_card_number: "GHA-999888777-0",
+        ghana_card_front_url: "https://storage.supabase.co/ghana-cards/order_999_front.jpg",
+        ghana_card_back_url: "https://storage.supabase.co/ghana-cards/order_999_back.jpg",
+        status: "approved",
+        installment_frequency: "monthly"
+      };
+
+      const eqChain = (dataToReturn: any) => ({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: dataToReturn, error: null })
+        })
+      });
+
+      mockSelect
+        .mockReturnValueOnce(eqChain(mockOrderData)) // orders
+        .mockReturnValueOnce(eqChain({ full_name: "Test User", phone: "0240000000" })) // profiles
+        .mockReturnValueOnce({
+          in: vi.fn().mockReturnValue({
+            then: (resolve: any) => resolve({ data: [], error: null })
+          })
+        }) // warranties
+        .mockReturnValueOnce(eqChain(mockInstData)); // installment_applications
+
+      const { getAdminOrderById } = await import("@/actions/admin/orders");
+      const order = await getAdminOrderById("order-inst-999");
+
+      expect(order).not.toBeNull();
+      expect(order?.installmentApplication).toBeDefined();
+      expect(order?.installmentApplication?.ghanaCardNumber).toBe("GHA-999888777-0");
+      expect(order?.installmentApplication?.ghanaCardFrontUrl).toBe("https://storage.supabase.co/ghana-cards/order_999_front.jpg");
+      expect(order?.installmentApplication?.ghanaCardBackUrl).toBe("https://storage.supabase.co/ghana-cards/order_999_back.jpg");
+      expect(order?.installmentApplication?.depositAmount).toBe(4800);
+    });
   });
 });

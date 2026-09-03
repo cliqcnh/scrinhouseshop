@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ShieldCheck, Truck, CreditCard, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateOrderStatus, assignProductWarranty } from "@/actions/admin/orders";
 import { formatPrice } from "@/utils/format";
+import { GhanaCardImagePreview } from "../../installments/installment-list-client";
 
 interface OrderItem {
   id: string;
@@ -17,6 +18,19 @@ interface OrderItem {
   quantity: number;
   price: number;
   registeredSerial: string | null;
+}
+
+interface InstallmentApplicationDetails {
+  id: string;
+  basePrice: number;
+  totalPrice: number;
+  depositAmount: number;
+  remainingBalance: number;
+  ghanaCardNumber: string;
+  ghanaCardFrontUrl: string;
+  ghanaCardBackUrl: string;
+  status: string;
+  installmentFrequency: string;
 }
 
 interface OrderDetails {
@@ -39,6 +53,7 @@ interface OrderDetails {
     fullName: string;
     phone: string;
   } | null;
+  installmentApplication?: InstallmentApplicationDetails | null;
   items: OrderItem[];
 }
 
@@ -46,6 +61,7 @@ export function OrderDetailsClient({ order }: { order: OrderDetails }) {
   const router = useRouter();
   const [status, setStatus] = useState(order.status);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [activeCardView, setActiveCardView] = useState<{ front: string; back: string; name: string } | null>(null);
 
   // Serial inputs mapping orderItemId -> serial string
   const [serials, setSerials] = useState<Record<string, string>>({});
@@ -251,8 +267,92 @@ export function OrderDetailsClient({ order }: { order: OrderDetails }) {
               <p className="text-xs text-muted-foreground">No address recorded (Walk-in or test data).</p>
             )}
           </section>
+
+          {/* Ghana Card & Installment Application Card */}
+          {order.installmentApplication && (
+            <section className="border border-border p-5 space-y-3 bg-background">
+              <div className="flex items-center gap-1.5">
+                <CreditCard className="size-4 text-blue-600" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Ghana Card & Installment
+                </h2>
+              </div>
+
+              <div className="text-xs space-y-2">
+                <div>
+                  <p className={labelCls}>Ghana Card Number</p>
+                  <p className="text-foreground font-mono font-bold mt-0.5">
+                    {order.installmentApplication.ghanaCardNumber}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
+                  <div>
+                    <p className={labelCls}>Deposit Paid</p>
+                    <p className="text-green-700 font-mono font-bold mt-0.5">
+                      {formatPrice(order.installmentApplication.depositAmount)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={labelCls}>Remaining Balance</p>
+                    <p className="text-foreground font-mono font-bold mt-0.5">
+                      {formatPrice(order.installmentApplication.remainingBalance)}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveCardView({
+                      front: order.installmentApplication!.ghanaCardFrontUrl,
+                      back: order.installmentApplication!.ghanaCardBackUrl,
+                      name: order.customerProfile?.fullName ?? "Customer",
+                    })
+                  }
+                  className="mt-2 flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-[#1d4ed8] hover:bg-blue-800 w-full py-2"
+                >
+                  <Eye className="size-3.5" /> View Ghana Card Photos
+                </button>
+              </div>
+            </section>
+          )}
         </div>
       </div>
+
+      {/* Ghana Card Modal Viewer */}
+      {activeCardView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white max-w-2xl w-full p-6 border border-border space-y-4 relative">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="font-heading text-base font-bold text-foreground">
+                Ghana Card Verification — {activeCardView.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveCardView(null)}
+                className="text-muted-foreground hover:text-foreground p-1"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <GhanaCardImagePreview src={activeCardView.front} label="Front Side" />
+              <GhanaCardImagePreview src={activeCardView.back} label="Back Side" />
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-border mt-4">
+              <span className="text-[11px] text-muted-foreground">
+                Verify applicant identity details matches the Ghana Card record.
+              </span>
+              <Button onClick={() => setActiveCardView(null)} variant="outline" className="rounded-none text-xs">
+                Close Viewer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

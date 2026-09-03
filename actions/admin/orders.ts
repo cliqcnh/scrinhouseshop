@@ -130,6 +130,39 @@ export async function getAdminOrderById(id: string) {
     });
   }
 
+  // Fetch linked installment application if any
+  let installmentApplication = null;
+  const { data: instData } = await (supabase.from("installment_applications") as any)
+    .select(`
+      id,
+      base_price,
+      total_price,
+      deposit_amount,
+      remaining_balance,
+      ghana_card_number,
+      ghana_card_front_url,
+      ghana_card_back_url,
+      status,
+      installment_frequency
+    `)
+    .eq("order_id", id)
+    .maybeSingle();
+
+  if (instData) {
+    installmentApplication = {
+      id: instData.id,
+      basePrice: Number(instData.base_price),
+      totalPrice: Number(instData.total_price),
+      depositAmount: Number(instData.deposit_amount),
+      remainingBalance: Number(instData.remaining_balance),
+      ghanaCardNumber: instData.ghana_card_number,
+      ghanaCardFrontUrl: instData.ghana_card_front_url,
+      ghanaCardBackUrl: instData.ghana_card_back_url,
+      status: instData.status,
+      installmentFrequency: instData.installment_frequency || "monthly",
+    };
+  }
+
   return {
     id: data.id,
     userId: data.user_id,
@@ -142,6 +175,7 @@ export async function getAdminOrderById(id: string) {
     paystackRef: data.paystack_ref,
     createdAt: data.created_at,
     customerProfile,
+    installmentApplication,
     items: (data.order_items ?? []).map((item: any) => ({
       id: item.id,
       productId: item.product_id,

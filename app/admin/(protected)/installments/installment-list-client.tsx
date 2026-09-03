@@ -259,22 +259,14 @@ export function InstallmentListClient({ initialItems }: { initialItems: Installm
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Front Side</p>
-                <div className="aspect-[3/2] border border-border bg-muted/10 overflow-hidden flex items-center justify-center">
-                  <img src={activeCardView.front} alt="Ghana Card Front" className="size-full object-contain" />
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Back Side</p>
-                <div className="aspect-[3/2] border border-border bg-muted/10 overflow-hidden flex items-center justify-center">
-                  <img src={activeCardView.back} alt="Ghana Card Back" className="size-full object-contain" />
-                </div>
-              </div>
+              <GhanaCardImagePreview src={activeCardView.front} label="Front Side" />
+              <GhanaCardImagePreview src={activeCardView.back} label="Back Side" />
             </div>
 
-            <div className="pt-2 text-right">
+            <div className="pt-2 flex items-center justify-between border-t border-border mt-4">
+              <span className="text-[11px] text-muted-foreground">
+                Verify applicant identity details matches the Ghana Card record.
+              </span>
               <Button onClick={() => setActiveCardView(null)} variant="outline" className="rounded-none text-xs">
                 Close Viewer
               </Button>
@@ -421,6 +413,46 @@ export function InstallmentListClient({ initialItems }: { initialItems: Installm
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export function GhanaCardImagePreview({ src, label }: { src: string; label: string }) {
+  const [hasError, setHasError] = useState(false);
+  const isValidSrc = src && src !== "N/A" && src.trim().length > 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+        {isValidSrc && !hasError && (
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-semibold text-[#1d4ed8] hover:underline"
+          >
+            Open Full Size ↗
+          </a>
+        )}
+      </div>
+      <div className="aspect-[3/2] border border-border bg-muted/10 overflow-hidden flex flex-col items-center justify-center p-2 relative">
+        {isValidSrc && !hasError ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={src}
+            alt={label}
+            onError={() => setHasError(true)}
+            className="size-full object-contain"
+          />
+        ) : (
+          <div className="text-center p-4 space-y-1">
+            <CreditCard className="size-8 text-muted-foreground/40 mx-auto" strokeWidth={1.5} />
+            <p className="text-xs font-semibold text-muted-foreground">Photo not available</p>
+            <p className="text-[10px] text-muted-foreground/70">No image attached or link broken</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

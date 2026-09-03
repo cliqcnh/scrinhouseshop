@@ -1,9 +1,50 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { getServerEnv } from "@/lib/env";
 import type { CartItem } from "@/stores/cart";
 import { sendSMS, sendEmail } from "@/lib/notifications";
+
+async function uploadGhanaCardImage(dataUrl: string | undefined, fileName: string): Promise<string> {
+  if (!dataUrl || !dataUrl.trim()) return "N/A";
+  if (!dataUrl.startsWith("data:image/")) return dataUrl;
+
+  try {
+    const env = getServerEnv();
+    if (!env.SUPABASE_SERVICE_ROLE_KEY) return dataUrl;
+
+    const adminSupabase = createServiceRoleClient();
+    const matches = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return dataUrl;
+
+    const contentType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, "base64");
+    const ext = contentType.split("/")[1] || "jpg";
+    const storagePath = `ghana-cards/${fileName}.${ext}`;
+
+    const { error: uploadError } = await adminSupabase.storage
+      .from("product-media")
+      .upload(storagePath, buffer, {
+        contentType,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error(`Failed to upload Ghana Card photo to storage (${storagePath}):`, uploadError.message);
+      return dataUrl;
+    }
+
+    const { data: publicUrlData } = adminSupabase.storage
+      .from("product-media")
+      .getPublicUrl(storagePath);
+
+    return publicUrlData.publicUrl || dataUrl;
+  } catch (err) {
+    console.error("Error processing Ghana Card photo upload:", err);
+    return dataUrl;
+  }
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface DeliveryAddress {
@@ -207,6 +248,17 @@ export async function placeOrder(
 
   // Save Installment Applications if applicable
   if (hasInstallment && installmentDetails) {
+    let finalFrontUrl = installmentDetails.ghanaCardFrontUrl || "N/A";
+    let finalBackUrl = installmentDetails.ghanaCardBackUrl || "N/A";
+
+    // Upload base64 photos to Supabase Storage for persistence and performance
+    if (finalFrontUrl.startsWith("data:image/")) {
+      finalFrontUrl = await uploadGhanaCardImage(finalFrontUrl, `${order.id}_front`);
+    }
+    if (finalBackUrl.startsWith("data:image/")) {
+      finalBackUrl = await uploadGhanaCardImage(finalBackUrl, `${order.id}_back`);
+    }
+
     const installmentRows = cartItems
       .filter((i) => i.isInstallment)
       .map((item) => ({
@@ -219,8 +271,8 @@ export async function placeOrder(
         deposit_amount: item.depositAmount ?? item.price * 0.48,
         remaining_balance: item.remainingBalance ?? item.price * 0.72,
         ghana_card_number: installmentDetails.ghanaCardNumber,
-        ghana_card_front_url: installmentDetails.ghanaCardFrontUrl || "N/A",
-        ghana_card_back_url: installmentDetails.ghanaCardBackUrl || "N/A",
+        ghana_card_front_url: finalFrontUrl,
+        ghana_card_back_url: finalBackUrl,
         status: "pending_review",
         installment_frequency: item.installmentFrequency || "monthly",
       }));
