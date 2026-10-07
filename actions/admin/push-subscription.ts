@@ -72,11 +72,11 @@ export async function sendTestPushNotificationAction() {
     });
 
     if (!res.success) {
-      return { success: false, error: "Failed to dispatch test push notification." };
+      return { success: false, error: res.error ?? "Failed to dispatch test push notification." };
     }
 
     if (res.sentCount === 0) {
-      return { success: false, error: "No subscribed devices found. Enable notifications first!" };
+      return { success: false, error: "No subscribed devices found. Tap 'Enable Push Notifications' first!" };
     }
 
     return { success: true, sentCount: res.sentCount };

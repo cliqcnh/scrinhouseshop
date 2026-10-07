@@ -1,9 +1,9 @@
 import webpush from "web-push";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 
-// Default fallback VAPID keys if process.env values are not set
-const DEFAULT_VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSg62fT2A8qP-vN3yB-F3s9aB_yS7mJ8w3zE";
-const DEFAULT_VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "4d9a-c1_n-H8B_gH9jX-z2y3x4w5v6u7t8s9r0q";
+// Cryptographically valid matching VAPID keypair
+const DEFAULT_VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BBeIprVAv9V6Y2Dk8QmDv3ddAfpB6GD-quywspkWTa1sbAAjnmeew7YjLYwLLmWYRj2mlYzRPBHpCaZxEpJpscI";
+const DEFAULT_VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "nuZxhB_LMhRTFf-MKl0yen8Pb0FbLaJwvR_OZQnvLBg";
 
 export function getVapidPublicKey(): string {
   return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || DEFAULT_VAPID_PUBLIC;
@@ -39,7 +39,7 @@ interface WebPushError {
 /**
  * Sends a native Web Push Notification to all subscribed admin devices when a new order arrives.
  */
-export async function sendAdminOrderPushNotification(payload: OrderPushPayload): Promise<{ success: boolean; sentCount: number }> {
+export async function sendAdminOrderPushNotification(payload: OrderPushPayload): Promise<{ success: boolean; sentCount: number; error?: string }> {
   try {
     initWebPush();
     const supabase = createServiceRoleClient();
@@ -48,9 +48,14 @@ export async function sendAdminOrderPushNotification(payload: OrderPushPayload):
       .from("admin_push_subscriptions")
       .select("id, endpoint, p256dh, auth");
 
+    if (error) {
+      console.error("[PUSH DB ERROR]", error.message);
+      return { success: false, sentCount: 0, error: error.message };
+    }
+
     const subscriptions = (rawSubscriptions as unknown as PushSubRecord[]) ?? [];
 
-    if (error || subscriptions.length === 0) {
+    if (subscriptions.length === 0) {
       console.log("[PUSH] No admin device subscriptions registered yet.");
       return { success: true, sentCount: 0 };
     }
@@ -66,6 +71,7 @@ export async function sendAdminOrderPushNotification(payload: OrderPushPayload):
 
     let sentCount = 0;
     const expiredIds: string[] = [];
+    let lastPushError = "";
 
     await Promise.all(
       subscriptions.map(async (sub) => {
@@ -82,6 +88,7 @@ export async function sendAdminOrderPushNotification(payload: OrderPushPayload):
           sentCount++;
         } catch (err: unknown) {
           const pushErr = err as WebPushError;
+          lastPushError = pushErr.message || "Failed push delivery";
           console.error(`[PUSH ERROR] Failed to send push to endpoint ${sub.endpoint}:`, pushErr.message);
           // If subscription is 404 or 410 (expired/unsubscribed), mark for removal
           if (pushErr.statusCode === 404 || pushErr.statusCode === 410) {
@@ -99,10 +106,15 @@ export async function sendAdminOrderPushNotification(payload: OrderPushPayload):
         .in("id", expiredIds);
     }
 
+    if (sentCount === 0 && subscriptions.length > 0) {
+      return { success: false, sentCount: 0, error: lastPushError || "Push notification delivery failed for registered devices." };
+    }
+
     console.log(`[PUSH SUCCESS] Web push notification delivered to ${sentCount}/${subscriptions.length} admin devices.`);
     return { success: true, sentCount };
-  } catch (err) {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to dispatch push notification";
     console.error("[PUSH EXCEPTION] Failed to dispatch admin order push notification:", err);
-    return { success: false, sentCount: 0 };
+    return { success: false, sentCount: 0, error: msg };
   }
 }
