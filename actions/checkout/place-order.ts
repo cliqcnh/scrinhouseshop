@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { getServerEnv } from "@/lib/env";
 import type { CartItem } from "@/stores/cart";
 import { sendSMS, sendEmail } from "@/lib/notifications";
+import { sendAdminOrderPushNotification } from "@/lib/push-notifications";
 
 async function uploadGhanaCardImage(dataUrl: string | undefined, fileName: string): Promise<string> {
   if (!dataUrl || !dataUrl.trim()) return "N/A";
@@ -356,6 +357,15 @@ export async function placeOrder(
         `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} (${hasInstallment ? "Installment" : "Regular"}) placed by ${address.fullName} (${address.phone}) is ${isPaid ? "PAID" : "SUBMITTED FOR REVIEW"}. Total: ${formattedTotal}. Items: ${productNames}`
       );
     }
+
+    // Always dispatch Web Push notification to all admin home screen / browser devices
+    const productSummary = cartItems.map((item) => `${item.name} (x${item.quantity})`).join(", ");
+    await sendAdminOrderPushNotification({
+      title: `🛒 New Order #${order.id.slice(0, 8).toUpperCase()}`,
+      body: `Placed by ${address.fullName} (${formattedTotal}). Items: ${productSummary}`,
+      url: `/admin/orders/${order.id}`,
+      orderId: order.id,
+    }).catch((err) => console.error("Web Push dispatch error:", err));
 
     await sendEmail(
       user.email,

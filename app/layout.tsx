@@ -49,6 +49,7 @@ export const metadata: Metadata = {
     description:
       "Buy smartphones, accessories, and repair parts, or book a phone repair with doorstep pickup, in Ghana.",
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
