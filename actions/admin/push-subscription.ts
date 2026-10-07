@@ -32,13 +32,20 @@ export async function savePushSubscriptionAction(subscription: {
 
     if (error) {
       console.error("Failed to save push subscription:", error.message);
+      if (error.message.includes("could not find table") || error.code === "42P01" || error.code === "PGRST205") {
+        return {
+          success: false,
+          error: "Database table 'admin_push_subscriptions' is missing. Please run the SQL migration in Supabase SQL Editor.",
+        };
+      }
       return { success: false, error: error.message };
     }
 
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to save push subscription";
     console.error("Exception in savePushSubscriptionAction:", err);
-    return { success: false, error: err.message || "Failed to save push subscription" };
+    return { success: false, error: msg };
   }
 }
 
@@ -50,8 +57,9 @@ export async function removePushSubscriptionAction(endpoint: string) {
       .eq("endpoint", endpoint);
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to remove subscription";
+    return { success: false, error: msg };
   }
 }
 
@@ -72,7 +80,8 @@ export async function sendTestPushNotificationAction() {
     }
 
     return { success: true, sentCount: res.sentCount };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to send test push notification";
+    return { success: false, error: msg };
   }
 }
