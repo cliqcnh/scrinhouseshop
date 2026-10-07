@@ -176,6 +176,7 @@ describe("Installment Financial Math & Server Actions", () => {
       const res = await placeOrder(
         [
           {
+            imageUrl: null,
             variantId: "variant-custom",
             productId: "prod-custom",
             name: "Custom iPhone",
@@ -193,7 +194,7 @@ describe("Installment Financial Math & Server Actions", () => {
           phone: "0240000000",
           region: "Greater Accra",
           city: "Accra",
-          streetAddress: "123 Street",
+          landmark: "Near Market",
         },
         {
           ghanaCardNumber: "GHA-111111111-1",
@@ -247,6 +248,7 @@ describe("Installment Financial Math & Server Actions", () => {
       await expect(placeOrder(
         [
           {
+            imageUrl: null,
             variantId: "variant-custom-2",
             productId: "prod-custom-2",
             name: "Custom iPhone 2",
@@ -264,7 +266,7 @@ describe("Installment Financial Math & Server Actions", () => {
           phone: "0240000000",
           region: "Greater Accra",
           city: "Accra",
-          streetAddress: "123 Street",
+          landmark: "Near Market",
         },
         {
           ghanaCardNumber: "GHA-111111111-1",
