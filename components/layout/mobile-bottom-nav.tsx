@@ -12,7 +12,6 @@ import {
   Wrench,
   RefreshCw,
   Shield,
-  Truck,
   ChevronRight,
   Sparkles,
 } from "lucide-react";
@@ -70,24 +69,24 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
 
   return (
     <>
-      {/* ── Modern Floating Pill Mobile Navigation Bar ── */}
-      <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-md block md:hidden pointer-events-none">
+      {/* ── Modern Bigger Liquid Glass Floating Pill Mobile Navigation Bar ── */}
+      <div className="fixed bottom-5 left-3 right-3 z-40 mx-auto max-w-md block md:hidden pointer-events-none">
         <nav
-          aria-label="Mobile Floating Bottom Navigation"
-          className="pointer-events-auto relative flex items-center justify-around rounded-full border border-neutral-200/80 bg-white/90 p-1.5 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5"
+          aria-label="Liquid Glass Mobile Navigation"
+          className="pointer-events-auto relative flex items-center justify-around rounded-[32px] border border-white/60 bg-white/40 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] backdrop-blur-2xl backdrop-saturate-200 ring-1 ring-white/80 transition-all duration-300 dark:border-white/15 dark:bg-neutral-950/40 dark:ring-white/10 before:absolute before:inset-0 before:rounded-[32px] before:bg-gradient-to-b before:from-white/40 before:to-transparent before:pointer-events-none"
         >
           {/* Tab 1: Home */}
           <Link
             href="/"
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               isActive("/") && !menuOpen
-                ? "bg-neutral-900 text-white shadow-md scale-[1.02]"
-                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60"
+                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+                : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
-            <Home className={cn("size-4 shrink-0 transition-transform duration-200", isActive("/") && !menuOpen && "scale-110")} />
-            <span className={cn(!isActive("/") || menuOpen ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <Home className={cn("size-5 shrink-0 transition-transform duration-300", isActive("/") && !menuOpen && "scale-110")} />
+            <span className={cn(!isActive("/") || menuOpen ? "hidden xs:inline" : "inline")}>
               Home
             </span>
           </Link>
@@ -97,14 +96,14 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
             type="button"
             onClick={() => setMenuOpen(true)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               menuOpen
-                ? "bg-neutral-900 text-white shadow-md scale-[1.02]"
-                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60"
+                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+                : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
-            <Grid3X3 className={cn("size-4 shrink-0 transition-transform duration-200", menuOpen && "scale-110")} />
-            <span className={cn(!menuOpen ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <Grid3X3 className={cn("size-5 shrink-0 transition-transform duration-300", menuOpen && "scale-110")} />
+            <span className={cn(!menuOpen ? "hidden xs:inline" : "inline")}>
               Explore
             </span>
           </button>
@@ -113,19 +112,19 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
           <Link
             href="/market-days"
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200 relative",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300 relative",
               isActive("/market-days")
-                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md scale-[1.02]"
-                : "text-red-600 hover:bg-red-50/80"
+                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-xl shadow-red-600/30 backdrop-blur-md scale-[1.04]"
+                : "text-red-600 hover:bg-red-500/10"
             )}
           >
             <div className="relative flex items-center justify-center">
-              <Flame className={cn("size-4 shrink-0 transition-transform duration-200", isActive("/market-days") ? "fill-white/20" : "fill-red-500/10")} />
+              <Flame className={cn("size-5 shrink-0 transition-transform duration-300", isActive("/market-days") ? "fill-white/30" : "fill-red-500/20")} />
               {!isActive("/market-days") && (
-                <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-red-600 animate-pulse" />
+                <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-600 animate-pulse" />
               )}
             </div>
-            <span className={cn(!isActive("/market-days") ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <span className={cn(!isActive("/market-days") ? "hidden xs:inline" : "inline")}>
               Deals
             </span>
           </Link>
@@ -135,21 +134,21 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
             type="button"
             onClick={() => setCartOpen(true)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200 relative",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300 relative",
               cartOpen
-                ? "bg-neutral-900 text-white shadow-md scale-[1.02]"
-                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60"
+                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+                : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
             <div className="relative flex items-center justify-center">
-              <ShoppingBag className="size-4 shrink-0" />
+              <ShoppingBag className="size-5 shrink-0" />
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2.5 flex min-w-[16px] h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow-sm animate-in zoom-in-50">
+                <span className="absolute -top-2.5 -right-3 flex min-w-[18px] h-4.5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-extrabold text-white shadow-md animate-in zoom-in-50">
                   {cartCount > 99 ? "99+" : cartCount}
                 </span>
               )}
             </div>
-            <span className={cn(!cartOpen ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <span className={cn(!cartOpen ? "hidden xs:inline" : "inline")}>
               Cart
             </span>
           </button>
@@ -158,14 +157,14 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
           <Link
             href="/account"
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               isActive("/account")
-                ? "bg-neutral-900 text-white shadow-md scale-[1.02]"
-                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60"
+                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+                : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
-            <User className="size-4 shrink-0" />
-            <span className={cn(!isActive("/account") ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <User className="size-5 shrink-0" />
+            <span className={cn(!isActive("/account") ? "hidden xs:inline" : "inline")}>
               {displayName ? displayName.slice(0, 6) : "Account"}
             </span>
           </Link>

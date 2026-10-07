@@ -110,24 +110,24 @@ export function AdminMobileBottomNav({
 
   return (
     <>
-      {/* ── Modern Floating Pill Nav for Admin ── */}
-      <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-md block lg:hidden pointer-events-none">
+      {/* ── Modern Roomier Liquid Glass Floating Pill Nav for Admin ── */}
+      <div className="fixed bottom-5 left-3 right-3 z-40 mx-auto max-w-md block lg:hidden pointer-events-none">
         <nav
-          aria-label="Admin Floating Mobile Navigation"
-          className="pointer-events-auto relative flex items-center justify-around rounded-full border border-slate-800 bg-slate-950/90 p-1.5 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] ring-1 ring-white/10"
+          aria-label="Admin Liquid Glass Navigation"
+          className="pointer-events-auto relative flex items-center justify-around rounded-[32px] border border-slate-700/80 bg-slate-950/50 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl backdrop-saturate-200 ring-1 ring-white/15 transition-all duration-300 before:absolute before:inset-0 before:rounded-[32px] before:bg-gradient-to-b before:from-white/10 before:to-transparent before:pointer-events-none"
         >
           {/* Dashboard */}
           <Link
             href="/admin"
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               isTabActive("/admin") && !drawerOpen
-                ? "bg-sky-500 text-slate-950 shadow-md scale-[1.02]"
-                : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
+                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+                : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <LayoutDashboard className="size-4 shrink-0" />
-            <span className={cn(!isTabActive("/admin") || drawerOpen ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <LayoutDashboard className="size-5 shrink-0" />
+            <span className={cn(!isTabActive("/admin") || drawerOpen ? "hidden xs:inline" : "inline")}>
               Dashboard
             </span>
           </Link>
@@ -136,14 +136,14 @@ export function AdminMobileBottomNav({
           <Link
             href="/admin/products"
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               isTabActive("/admin/products")
-                ? "bg-sky-500 text-slate-950 shadow-md scale-[1.02]"
-                : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
+                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+                : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <Package className="size-4 shrink-0" />
-            <span className={cn(!isTabActive("/admin/products") ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <Package className="size-5 shrink-0" />
+            <span className={cn(!isTabActive("/admin/products") ? "hidden xs:inline" : "inline")}>
               Products
             </span>
           </Link>
@@ -152,14 +152,14 @@ export function AdminMobileBottomNav({
           <Link
             href="/admin/categories"
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               isTabActive("/admin/categories")
-                ? "bg-sky-500 text-slate-950 shadow-md scale-[1.02]"
-                : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
+                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+                : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <FolderTree className="size-4 shrink-0" />
-            <span className={cn(!isTabActive("/admin/categories") ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <FolderTree className="size-5 shrink-0" />
+            <span className={cn(!isTabActive("/admin/categories") ? "hidden xs:inline" : "inline")}>
               Categories
             </span>
           </Link>
@@ -168,14 +168,14 @@ export function AdminMobileBottomNav({
           <Link
             href="/admin/market-days"
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               isTabActive("/admin/market-days")
-                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md scale-[1.02]"
+                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-xl shadow-red-600/30 scale-[1.04]"
                 : "text-red-400 hover:bg-red-950/40"
             )}
           >
-            <Flame className="size-4 shrink-0" />
-            <span className={cn(!isTabActive("/admin/market-days") ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <Flame className="size-5 shrink-0" />
+            <span className={cn(!isTabActive("/admin/market-days") ? "hidden xs:inline" : "inline")}>
               Deals
             </span>
           </Link>
@@ -185,14 +185,14 @@ export function AdminMobileBottomNav({
             type="button"
             onClick={() => setDrawerOpen(true)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 px-2 text-xs font-semibold transition-all duration-200",
+              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
               drawerOpen
-                ? "bg-sky-500 text-slate-950 shadow-md scale-[1.02]"
-                : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
+                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+                : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <Grid className="size-4 shrink-0" />
-            <span className={cn(!drawerOpen ? "hidden xs:inline text-[11px]" : "inline text-xs")}>
+            <Grid className="size-5 shrink-0" />
+            <span className={cn(!drawerOpen ? "hidden xs:inline" : "inline")}>
               All Menu
             </span>
           </button>
