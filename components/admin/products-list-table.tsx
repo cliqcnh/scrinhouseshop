@@ -147,8 +147,76 @@ export function ProductsListTable({ initialProducts }: ProductsListTableProps) {
         </div>
       )}
 
-      {/* ── Products List Table ── */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-background">
+      {/* ── Mobile View: Touch Cards ── */}
+      <div className="grid grid-cols-1 gap-3 md:hidden">
+        {initialProducts.map((product) => {
+          const isSelected = selectedIds.includes(product.id);
+          return (
+            <div
+              key={product.id}
+              className={`rounded-xl border p-4 transition-all bg-background space-y-3 ${
+                isSelected ? "border-primary bg-primary/5 shadow-xs" : "border-border"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleSelectRow(product.id)}
+                    className="mt-1 size-5 rounded border-gray-300 accent-primary cursor-pointer shrink-0"
+                  />
+                  <div className="relative size-12 shrink-0 overflow-hidden rounded bg-muted border border-border">
+                    {product.primaryImageUrl && (
+                      <Image src={product.primaryImageUrl} alt="" fill className="object-cover" sizes="48px" />
+                    )}
+                  </div>
+                  <div>
+                    <Link href={`/admin/products/${product.id}`} className="font-semibold text-foreground hover:underline text-sm line-clamp-2">
+                      {product.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">{product.sku}</p>
+                  </div>
+                </div>
+
+                <Link href={`/admin/products/${product.id}`}>
+                  <Button variant="outline" size="xs" className="text-xs shrink-0">
+                    Edit
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Price (GH₵)</p>
+                  <InlinePriceEditor
+                    key={`mob-${product.id}-${product.basePrice}`}
+                    productId={product.id}
+                    initialPrice={product.basePrice}
+                  />
+                </div>
+
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Stock</p>
+                  <p className="font-semibold text-foreground text-sm">{product.totalStock}</p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Status</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Badge variant={product.isActive ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                      {product.isActive ? "Active" : "Hidden"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop View: Full Table ── */}
+      <div className="hidden md:block overflow-x-auto rounded-lg border border-border bg-background">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted-foreground bg-muted/10">

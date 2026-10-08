@@ -27,6 +27,7 @@ import {
   UserCog,
   BarChart3,
   Store,
+  ShoppingCart,
 } from "lucide-react";
 import {
   Sheet,
@@ -52,8 +53,9 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: "Selling & Promotions",
+    label: "Operations & Sales",
     items: [
+      { href: "/admin/orders", label: "Orders Management", icon: ShoppingCart },
       { href: "/admin/market-days", label: "Market Days Deals", icon: Flame },
       { href: "/admin/coupons", label: "Discount Coupons", icon: Ticket },
       { href: "/admin/installments", label: "Installment Plans", icon: CreditCard },
@@ -88,10 +90,14 @@ export function AdminMobileBottomNav({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Close drawer on route navigation
+  // Close drawer on route navigation and clean up scroll locks
   useEffect(() => {
     setDrawerOpen(false);
     setSearchQuery("");
+    if (typeof document !== "undefined") {
+      document.body.style.overflow = "";
+      document.body.style.pointerEvents = "";
+    }
   }, [pathname]);
 
   const isTabActive = (href: string) => {
@@ -123,7 +129,6 @@ export function AdminMobileBottomNav({
           {/* Dashboard */}
           <Link
             href="/admin"
-            scroll={false}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
               isDashboardActive
@@ -149,7 +154,6 @@ export function AdminMobileBottomNav({
           {/* Products */}
           <Link
             href="/admin/products"
-            scroll={false}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
               isProductsActive
@@ -175,7 +179,6 @@ export function AdminMobileBottomNav({
           {/* Categories */}
           <Link
             href="/admin/categories"
-            scroll={false}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
               isCategoriesActive
@@ -201,7 +204,6 @@ export function AdminMobileBottomNav({
           {/* Market Days / Selling Deals */}
           <Link
             href="/admin/market-days"
-            scroll={false}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
               isDealsActive
