@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { createServiceRoleClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 // Cryptographically valid matching VAPID keypair
 const DEFAULT_VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BBeIprVAv9V6Y2Dk8QmDv3ddAfpB6GD-quywspkWTa1sbAAjnmeew7YjLYwLLmWYRj2mlYzRPBHpCaZxEpJpscI";

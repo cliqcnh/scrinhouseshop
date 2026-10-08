@@ -1,6 +1,7 @@
 "use server";
 
-import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getVapidPublicKey, sendAdminOrderPushNotification } from "@/lib/push-notifications";
 
 export async function getVapidPublicKeyAction() {
