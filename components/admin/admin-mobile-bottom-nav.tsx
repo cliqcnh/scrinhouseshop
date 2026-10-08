@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Package,
@@ -18,7 +19,6 @@ import {
   BookOpen,
   MessageSquare,
   CreditCard,
-  RefreshCw,
   Ticket,
   Users,
   Wallet,
@@ -99,6 +99,11 @@ export function AdminMobileBottomNav({
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  const isDashboardActive = isTabActive("/admin") && !drawerOpen;
+  const isProductsActive = isTabActive("/admin/products") && !drawerOpen;
+  const isCategoriesActive = isTabActive("/admin/categories") && !drawerOpen;
+  const isDealsActive = isTabActive("/admin/market-days") && !drawerOpen;
+
   // Filter sections by search query
   const filteredSections = NAV_SECTIONS.map((sec) => ({
     ...sec,
@@ -118,64 +123,104 @@ export function AdminMobileBottomNav({
           {/* Dashboard */}
           <Link
             href="/admin"
+            scroll={false}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
-              isTabActive("/admin") && !drawerOpen
-                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
+              isDashboardActive
+                ? "text-slate-950 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <LayoutDashboard className="size-5 shrink-0" />
-            <span className={cn(!isTabActive("/admin") || drawerOpen ? "hidden xs:inline" : "inline")}>
-              Dashboard
+            {isDashboardActive && (
+              <motion.div
+                layoutId="adminActivePill"
+                className="absolute inset-0 rounded-full bg-sky-500 shadow-xl shadow-sky-500/25"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <LayoutDashboard className="size-5 shrink-0" />
+              <span className={cn(!isDashboardActive ? "hidden xs:inline" : "inline")}>
+                Dashboard
+              </span>
             </span>
           </Link>
 
           {/* Products */}
           <Link
             href="/admin/products"
+            scroll={false}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
-              isTabActive("/admin/products")
-                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
+              isProductsActive
+                ? "text-slate-950 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <Package className="size-5 shrink-0" />
-            <span className={cn(!isTabActive("/admin/products") ? "hidden xs:inline" : "inline")}>
-              Products
+            {isProductsActive && (
+              <motion.div
+                layoutId="adminActivePill"
+                className="absolute inset-0 rounded-full bg-sky-500 shadow-xl shadow-sky-500/25"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <Package className="size-5 shrink-0" />
+              <span className={cn(!isProductsActive ? "hidden xs:inline" : "inline")}>
+                Products
+              </span>
             </span>
           </Link>
 
           {/* Categories */}
           <Link
             href="/admin/categories"
+            scroll={false}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
-              isTabActive("/admin/categories")
-                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
+              isCategoriesActive
+                ? "text-slate-950 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <FolderTree className="size-5 shrink-0" />
-            <span className={cn(!isTabActive("/admin/categories") ? "hidden xs:inline" : "inline")}>
-              Categories
+            {isCategoriesActive && (
+              <motion.div
+                layoutId="adminActivePill"
+                className="absolute inset-0 rounded-full bg-sky-500 shadow-xl shadow-sky-500/25"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <FolderTree className="size-5 shrink-0" />
+              <span className={cn(!isCategoriesActive ? "hidden xs:inline" : "inline")}>
+                Categories
+              </span>
             </span>
           </Link>
 
           {/* Market Days / Selling Deals */}
           <Link
             href="/admin/market-days"
+            scroll={false}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
-              isTabActive("/admin/market-days")
-                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-xl shadow-red-600/30 scale-[1.04]"
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
+              isDealsActive
+                ? "text-white"
                 : "text-red-400 hover:bg-red-950/40"
             )}
           >
-            <Flame className="size-5 shrink-0" />
-            <span className={cn(!isTabActive("/admin/market-days") ? "hidden xs:inline" : "inline")}>
-              Deals
+            {isDealsActive && (
+              <motion.div
+                layoutId="adminActivePill"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-red-600 to-rose-600 shadow-xl shadow-red-600/30"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <Flame className="size-5 shrink-0" />
+              <span className={cn(!isDealsActive ? "hidden xs:inline" : "inline")}>
+                Deals
+              </span>
             </span>
           </Link>
 
@@ -184,15 +229,24 @@ export function AdminMobileBottomNav({
             type="button"
             onClick={() => setDrawerOpen(true)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
               drawerOpen
-                ? "bg-sky-500 text-slate-950 shadow-xl shadow-sky-500/25 scale-[1.04]"
+                ? "text-slate-950 font-bold"
                 : "text-slate-300 hover:text-white hover:bg-slate-800/40"
             )}
           >
-            <Grid className="size-5 shrink-0" />
-            <span className={cn(!drawerOpen ? "hidden xs:inline" : "inline")}>
-              All Menu
+            {drawerOpen && (
+              <motion.div
+                layoutId="adminActivePill"
+                className="absolute inset-0 rounded-full bg-sky-500 shadow-xl shadow-sky-500/25"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <Grid className="size-5 shrink-0" />
+              <span className={cn(!drawerOpen ? "hidden xs:inline" : "inline")}>
+                All Menu
+              </span>
             </span>
           </button>
         </nav>

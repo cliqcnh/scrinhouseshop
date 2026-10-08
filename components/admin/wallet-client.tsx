@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { motion } from "framer-motion";
 import { formatPrice } from "@/utils/format";
 import { updateWithdrawalStatus, updateReferralRewardSetting, type AdminWithdrawalRequestRow } from "@/actions/admin/wallet";
 import { Button } from "@/components/ui/button";
@@ -115,23 +116,37 @@ export function AdminWalletClient({ initialRequests, initialReward }: AdminWalle
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab("pending")}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all ${
+              className={`relative px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
                 activeTab === "pending"
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Pending Requests
+              {activeTab === "pending" && (
+                <motion.div
+                  layoutId="walletTabIndicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full"
+                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                />
+              )}
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all ${
+              className={`relative px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
                 activeTab === "history"
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Historical Logs
+              {activeTab === "history" && (
+                <motion.div
+                  layoutId="walletTabIndicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full"
+                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                />
+              )}
             </button>
           </div>
 

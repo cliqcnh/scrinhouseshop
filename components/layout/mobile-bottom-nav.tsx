@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Home,
   Grid3X3,
@@ -10,7 +11,6 @@ import {
   ShoppingBag,
   User,
   Wrench,
-  RefreshCw,
   Shield,
   ChevronRight,
   Sparkles,
@@ -66,9 +66,13 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
     return pathname === path || pathname.startsWith(`${path}/`);
   };
 
+  const isHomeActive = isActive("/") && !menuOpen && !cartOpen;
+  const isDealsActive = isActive("/market-days") && !menuOpen && !cartOpen;
+  const isAccountActive = isActive("/account") && !menuOpen && !cartOpen;
+
   return (
     <>
-      {/* ── Modern Bigger Liquid Glass Floating Pill Mobile Navigation Bar ── */}
+      {/* ── Modern Liquid Glass Floating Pill Mobile Navigation Bar ── */}
       <div className="fixed bottom-5 left-3 right-3 z-40 mx-auto max-w-md block md:hidden pointer-events-none">
         <nav
           aria-label="Liquid Glass Mobile Navigation"
@@ -77,16 +81,26 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
           {/* Tab 1: Home */}
           <Link
             href="/"
+            scroll={false}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
-              isActive("/") && !menuOpen
-                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
+              isHomeActive
+                ? "text-white"
                 : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
-            <Home className={cn("size-5 shrink-0 transition-transform duration-300", isActive("/") && !menuOpen && "scale-110")} />
-            <span className={cn(!isActive("/") || menuOpen ? "hidden xs:inline" : "inline")}>
-              Home
+            {isHomeActive && (
+              <motion.div
+                layoutId="storefrontActivePill"
+                className="absolute inset-0 rounded-full bg-neutral-900/90 shadow-xl shadow-neutral-950/20 backdrop-blur-md"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <Home className={cn("size-5 shrink-0 transition-transform duration-200", isHomeActive && "scale-110")} />
+              <span className={cn(!isHomeActive ? "hidden xs:inline" : "inline")}>
+                Home
+              </span>
             </span>
           </Link>
 
@@ -95,36 +109,55 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
             type="button"
             onClick={() => setMenuOpen(true)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
               menuOpen
-                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+                ? "text-white"
                 : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
-            <Grid3X3 className={cn("size-5 shrink-0 transition-transform duration-300", menuOpen && "scale-110")} />
-            <span className={cn(!menuOpen ? "hidden xs:inline" : "inline")}>
-              Explore
+            {menuOpen && (
+              <motion.div
+                layoutId="storefrontActivePill"
+                className="absolute inset-0 rounded-full bg-neutral-900/90 shadow-xl shadow-neutral-950/20 backdrop-blur-md"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <Grid3X3 className={cn("size-5 shrink-0 transition-transform duration-200", menuOpen && "scale-110")} />
+              <span className={cn(!menuOpen ? "hidden xs:inline" : "inline")}>
+                Explore
+              </span>
             </span>
           </button>
 
           {/* Tab 3: Market Days (Deals) */}
           <Link
             href="/market-days"
+            scroll={false}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300 relative",
-              isActive("/market-days")
-                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-xl shadow-red-600/30 backdrop-blur-md scale-[1.04]"
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
+              isDealsActive
+                ? "text-white"
                 : "text-red-600 hover:bg-red-500/10"
             )}
           >
-            <div className="relative flex items-center justify-center">
-              <Flame className={cn("size-5 shrink-0 transition-transform duration-300", isActive("/market-days") ? "fill-white/30" : "fill-red-500/20")} />
-              {!isActive("/market-days") && (
-                <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-600 animate-pulse" />
-              )}
-            </div>
-            <span className={cn(!isActive("/market-days") ? "hidden xs:inline" : "inline")}>
-              Deals
+            {isDealsActive && (
+              <motion.div
+                layoutId="storefrontActivePill"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-red-600 to-rose-600 shadow-xl shadow-red-600/30 backdrop-blur-md"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <div className="relative flex items-center justify-center">
+                <Flame className={cn("size-5 shrink-0 transition-transform duration-200", isDealsActive ? "fill-white/30" : "fill-red-500/20")} />
+                {!isDealsActive && (
+                  <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-600 animate-pulse" />
+                )}
+              </div>
+              <span className={cn(!isDealsActive ? "hidden xs:inline" : "inline")}>
+                Deals
+              </span>
             </span>
           </Link>
 
@@ -133,38 +166,57 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
             type="button"
             onClick={() => setCartOpen(true)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300 relative",
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
               cartOpen
-                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+                ? "text-white"
                 : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
-            <div className="relative flex items-center justify-center">
-              <ShoppingBag className="size-5 shrink-0" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2.5 -right-3 flex min-w-[18px] h-4.5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-extrabold text-white shadow-md animate-in zoom-in-50">
-                  {cartCount > 99 ? "99+" : cartCount}
-                </span>
-              )}
-            </div>
-            <span className={cn(!cartOpen ? "hidden xs:inline" : "inline")}>
-              Cart
+            {cartOpen && (
+              <motion.div
+                layoutId="storefrontActivePill"
+                className="absolute inset-0 rounded-full bg-neutral-900/90 shadow-xl shadow-neutral-950/20 backdrop-blur-md"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <div className="relative flex items-center justify-center">
+                <ShoppingBag className="size-5 shrink-0" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-2.5 -right-3 flex min-w-[18px] h-4.5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-extrabold text-white shadow-md animate-in zoom-in-50">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
+              </div>
+              <span className={cn(!cartOpen ? "hidden xs:inline" : "inline")}>
+                Cart
+              </span>
             </span>
           </button>
 
           {/* Tab 5: Account */}
           <Link
             href="/account"
+            scroll={false}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-all duration-300",
-              isActive("/account")
-                ? "bg-neutral-900/90 text-white shadow-xl shadow-neutral-950/20 backdrop-blur-md scale-[1.04]"
+              "relative flex flex-1 items-center justify-center gap-2 rounded-full py-2.5 px-3 text-xs font-bold transition-colors duration-200",
+              isAccountActive
+                ? "text-white"
                 : "text-neutral-700 hover:text-neutral-950 hover:bg-white/40 dark:text-neutral-300 dark:hover:text-white"
             )}
           >
-            <User className="size-5 shrink-0" />
-            <span className={cn(!isActive("/account") ? "hidden xs:inline" : "inline")}>
-              {displayName ? displayName.slice(0, 6) : "Account"}
+            {isAccountActive && (
+              <motion.div
+                layoutId="storefrontActivePill"
+                className="absolute inset-0 rounded-full bg-neutral-900/90 shadow-xl shadow-neutral-950/20 backdrop-blur-md"
+                transition={{ type: "spring", stiffness: 400, damping: 33 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <User className="size-5 shrink-0" />
+              <span className={cn(!isAccountActive ? "hidden xs:inline" : "inline")}>
+                {displayName ? displayName.slice(0, 6) : "Account"}
+              </span>
             </span>
           </Link>
         </nav>

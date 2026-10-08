@@ -21,6 +21,7 @@ import { getWalletDetails } from "@/actions/storefront/wallet";
 import { WalletClient } from "@/components/account/wallet-client";
 import { CustomerTradeInList } from "@/components/account/trade-in-list-client";
 import { CustomerCareList } from "@/components/account/care-list-client";
+import { AccountTabLink, AccountTabWrapper } from "@/components/account/account-tab-wrapper";
 
 export const metadata: Metadata = { title: "My Account" };
 
@@ -94,30 +95,16 @@ export default async function AccountPage({ searchParams }: Props) {
         <aside className="md:col-span-3 space-y-6">
           {/* Tabs Menu */}
           <nav className="flex flex-row md:flex-col gap-1 border-b md:border-b-0 md:border-r border-border pb-4 md:pb-0 md:pr-4 overflow-x-auto">
-            {tabs.map((t) => {
-              const active = tab === t.id;
-              return (
-                <Link
-                  key={t.id}
-                  href={`/account?tab=${t.id}`}
-                  className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors shrink-0 ${
-                    active
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <t.icon className="size-4" />
-                  <span>{t.label}</span>
-                  {t.count > 0 && (
-                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                      active ? "bg-background text-foreground" : "bg-muted text-muted-foreground"
-                    }`}>
-                      {t.count}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+            {tabs.map((t) => (
+              <AccountTabLink
+                key={t.id}
+                id={t.id}
+                label={t.label}
+                icon={t.icon}
+                count={t.count}
+                active={tab === t.id}
+              />
+            ))}
           </nav>
 
           {/* Profile Card */}
@@ -151,6 +138,7 @@ export default async function AccountPage({ searchParams }: Props) {
 
         {/* ── Right Content Area (col-span-9) ── */}
         <main className="md:col-span-9">
+          <AccountTabWrapper activeTab={tab}>
           {/* TAB: ORDERS */}
           {tab === "orders" && (
             <div className="space-y-4">
@@ -390,6 +378,7 @@ export default async function AccountPage({ searchParams }: Props) {
               )}
             </div>
           )}
+          </AccountTabWrapper>
         </main>
       </div>
     </div>
