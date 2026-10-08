@@ -3,6 +3,8 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { sendSMS, sendEmail } from "@/lib/notifications";
+import { sendAdminOrderPushNotification } from "@/lib/push-notifications";
+import { getAppBaseUrl } from "@/lib/env";
 
 /**
  * POST /api/paystack/webhook
@@ -136,24 +138,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "DB update failed" }, { status: 500 });
   }
 
-  // Trigger payment notification alerts in background
+  // Trigger payment notification alerts in background upon verified payment
   if (order) {
     const address = (order as any).delivery_address as any;
     const customerPhone = address?.phone;
     const customerName = address?.fullName ?? "Customer";
     const formattedTotal = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(Number((order as any).total));
-    const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/track?q=${(order as any).id}`;
+    const baseUrl = getAppBaseUrl();
+    const trackingLink = `${baseUrl}/track?q=${(order as any).id}`;
 
     const items = ((order as any).order_items as any[]) ?? [];
     const productNames = items
       .map((item: any) => `${item.product_name} (x${item.quantity})`)
       .join(", ");
 
-    // Send SMS alert to admin upon successful payment
+    // Send SMS alert to admin (0559257401) upon successful payment
     await sendSMS(
       "0559257401",
       `[ADMIN ALERT] Order #${(order as any).id.slice(0, 8).toUpperCase()} has been PAID by ${customerName} (${customerPhone || "No Phone"}). Total: ${formattedTotal}. Items: ${productNames}`
     );
+
+    // Send Web Push notification to admin devices
+    await sendAdminOrderPushNotification({
+      title: `💰 Order Paid #${(order as any).id.slice(0, 8).toUpperCase()}`,
+      body: `Paid by ${customerName} (${formattedTotal}). Items: ${productNames}`,
+      url: `/admin/orders/${(order as any).id}`,
+      orderId: (order as any).id,
+    }).catch((err) => console.error("Web Push dispatch error:", err));
 
     let userEmail = "";
     if ((order as any).user_id) {

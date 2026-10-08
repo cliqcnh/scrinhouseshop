@@ -1,7 +1,5 @@
-"use server";
-
 import { createClient } from "@/lib/supabase/server";
-import { getServerEnv } from "@/lib/env";
+import { getServerEnv, getAppBaseUrl } from "@/lib/env";
 
 export interface RetryPaymentResult {
   success: boolean;
@@ -86,7 +84,7 @@ export async function retryPendingOrderPayment(orderId: string): Promise<RetryPa
             orderId: order.id,
             customerName,
           },
-          callback_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/order/${order.id}?ref=${paystackRef}`,
+          callback_url: `${getAppBaseUrl()}/order/${order.id}?ref=${paystackRef}`,
         }),
       });
 

@@ -351,59 +351,60 @@ export async function placeOrder(
     }
   }
 
-  // Trigger order initiation alerts in background using primary scrinhouse.com domain
-  if (user.email) {
+  // ── Notification Alerts ──────────────────────────────────────────────────
+  // Only send SMS, Email, and Admin alerts when payment has been completed or for installment applications.
+  // If payment is pending on Paystack, notifications are dispatched upon payment verification via webhook.
+  const isSettled = amountToPayOnline === 0 || hasInstallment;
+
+  if (isSettled && user.email) {
     const formattedTotal = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(total);
     const trackingLink = `${baseUrl}/track?q=${order.id}`;
     const formattedDeliveryFee = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(deliveryFee);
 
-    if (paymentMethod === "pod") {
-      await sendSMS(
-        address.phone,
-        `Hello ${address.fullName}, your ScrinHouse Accra Payment on Delivery order has been received! Delivery Fee: ${formattedDeliveryFee} (Payable upfront before dispatch). Item balance on delivery: ${new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(subtotal)}. Ref: ${paystackRef}. Track: ${trackingLink}`
-      );
-    } else {
-      await sendSMS(
-        address.phone,
-        `Hello ${address.fullName}, your ScrinHouse order has been received! Total: ${formattedTotal}. Ref: ${paystackRef}. Track here: ${trackingLink}`
-      );
+    if (address.phone) {
+      if (paymentMethod === "pod") {
+        await sendSMS(
+          address.phone,
+          `Hello ${address.fullName}, your ScrinHouse Accra Payment on Delivery order has been confirmed! Delivery Fee: ${formattedDeliveryFee} (Paid). Item balance on delivery: ${new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(subtotal)}. Track: ${trackingLink}`
+        );
+      } else {
+        await sendSMS(
+          address.phone,
+          `Hello ${address.fullName}, your ScrinHouse order #${order.id.slice(0, 8).toUpperCase()} has been confirmed! Total: ${formattedTotal}. Track here: ${trackingLink}`
+        );
+      }
     }
 
-    const isPaid = amountToPayOnline === 0;
-    const shouldAlertAdminNow = hasInstallment || isPaid || paymentMethod === "pod";
+    const productNames = cartItems
+      .map((item) => `${item.name} (x${item.quantity})`)
+      .join(", ");
 
-    if (shouldAlertAdminNow) {
-      const productNames = cartItems
-        .map((item) => `${item.name} (x${item.quantity})`)
-        .join(", ");
+    // Admin SMS Alert (0559257401)
+    await sendSMS(
+      "0559257401",
+      `[ADMIN ALERT] Order #${order.id.slice(0, 8).toUpperCase()} (${paymentMethod === "pod" ? "Accra POD" : hasInstallment ? "Installment" : "Paid"}) placed by ${address.fullName} (${address.phone}). Total: ${formattedTotal}. Items: ${productNames}`
+    );
 
-      await sendSMS(
-        "0559257401",
-        `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} (${paymentMethod === "pod" ? "Pay on Delivery (Accra)" : hasInstallment ? "Installment" : "Regular"}) placed by ${address.fullName} (${address.phone}). Total: ${formattedTotal}. Items: ${productNames}`
-      );
-    }
-
-    // Dispatch Web Push notification to admin devices
+    // Admin Web Push Notification
     const productSummary = cartItems.map((item) => `${item.name} (x${item.quantity})`).join(", ");
     await sendAdminOrderPushNotification({
-      title: `🛒 New Order #${order.id.slice(0, 8).toUpperCase()} ${paymentMethod === "pod" ? "(Accra POD)" : ""}`,
+      title: `🛒 Paid Order #${order.id.slice(0, 8).toUpperCase()} ${paymentMethod === "pod" ? "(Accra POD)" : ""}`,
       body: `Placed by ${address.fullName} (${formattedTotal}). Items: ${productSummary}`,
       url: `/admin/orders/${order.id}`,
       orderId: order.id,
     }).catch((err) => console.error("Web Push dispatch error:", err));
 
+    // Customer Email
     await sendEmail(
       user.email,
-      `Order Received - ScrinHouse`,
+      `Order Confirmed - ScrinHouse`,
       `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;">
-        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">Order Received!</h2>
+        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #22c55e;">Order Confirmed!</h2>
         <p>Hello ${address.fullName},</p>
-        <p>Thank you for shopping with ScrinHouse! We have successfully recorded your order.</p>
+        <p>Thank you for shopping with ScrinHouse! Your order has been successfully confirmed.</p>
         <p><strong>Order ID:</strong> #${order.id.slice(0, 8).toUpperCase()}</p>
         <p><strong>Total Amount:</strong> ${formattedTotal}</p>
-        ${paymentMethod === "pod" ? `<p><strong>Payment Option:</strong> Payment on Delivery (Greater Accra). Upfront Delivery Fee: ${formattedDeliveryFee}. Balance on Delivery: ${new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(subtotal)}</p>` : `<p><strong>Payment Reference:</strong> ${paystackRef}</p>`}
-        ${authorizationUrl ? `<p>To complete your ${paymentMethod === "pod" ? "Upfront Delivery Fee" : "Order"} payment: <a href="${authorizationUrl}">Pay ${paymentMethod === "pod" ? formattedDeliveryFee : formattedTotal} via Paystack</a></p>` : ""}
-        <p>You can track your order delivery progress anytime: <a href="${trackingLink}">Track Order Progress</a></p>
+        <p>You can track your order delivery progress anytime: <a href="${trackingLink}">${trackingLink}</a></p>
         <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>
       </div>`
     );
