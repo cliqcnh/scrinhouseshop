@@ -45,3 +45,16 @@ export function getServerEnv(): ServerEnv {
 
   return cached;
 }
+
+/**
+ * Returns the primary app base URL (https://www.scrinhouse.com).
+ * Ensures order notifications, SMS tracking links, emails, and Paystack callbacks
+ * always send customers to scrinhouse.com instead of temporary Vercel preview URLs or localhost.
+ */
+export function getAppBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl && envUrl.startsWith("http") && !envUrl.includes("localhost")) {
+    return envUrl.replace(/\/$/, "");
+  }
+  return "https://www.scrinhouse.com";
+}

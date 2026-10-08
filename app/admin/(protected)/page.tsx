@@ -4,7 +4,6 @@ import { StatCard } from "@/components/admin/stat-card";
 import { getDashboardStats, listAdminProducts } from "@/services/admin-service";
 import { formatPrice } from "@/utils/format";
 import { DashboardSearch } from "@/components/admin/dashboard-search";
-import { PushNotificationToggle } from "@/components/admin/push-notification-toggle";
 
 export const metadata = { title: "Dashboard" };
 
@@ -22,9 +21,6 @@ export default async function AdminDashboardPage() {
           Real-time metrics for catalog inventory, orders revenue, and device repairs.
         </p>
       </div>
-
-      {/* Real-time Order Push Notification Toggle Card */}
-      <PushNotificationToggle />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {/* Sales & Orders */}

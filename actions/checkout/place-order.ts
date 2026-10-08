@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
-import { getServerEnv } from "@/lib/env";
+import { getServerEnv, getAppBaseUrl } from "@/lib/env";
 import type { CartItem } from "@/stores/cart";
 import { sendSMS, sendEmail } from "@/lib/notifications";
 import { sendAdminOrderPushNotification } from "@/lib/push-notifications";
@@ -78,7 +78,8 @@ export async function placeOrder(
   cartItems: CartItem[],
   address: DeliveryAddress,
   installmentDetails?: InstallmentDetails,
-  walletAmountToApply?: number,
+  walletAmountToApply = 0,
+  paymentMethod: "paystack" | "pod" = "paystack",
 ): Promise<PlaceOrderResult> {
   const supabase = await createClient();
 
@@ -87,6 +88,11 @@ export async function placeOrder(
   if (!user) throw new Error("You must be signed in to place an order.");
 
   if (cartItems.length === 0) throw new Error("Your cart is empty.");
+
+  const isAccra = address.region.toLowerCase().includes("accra");
+  if (paymentMethod === "pod" && !isAccra) {
+    throw new Error("Payment on Delivery is only available for customers in the Greater Accra region.");
+  }
 
   // ── Stock & Financial Validation ───────────────────────────────────────────
   const variantIds = cartItems.map((i) => i.variantId);
@@ -193,21 +199,28 @@ export async function placeOrder(
 
   const remainingTotal = total - appliedWalletAmount;
 
+  // For Payment on Delivery (Accra Only), the customer pays the delivery fee upfront before item dispatch
+  let amountToPayOnline = remainingTotal;
+  if (paymentMethod === "pod") {
+    amountToPayOnline = Math.max(0, deliveryFee - appliedWalletAmount);
+  }
+
   const installmentDeposit = verifiedDepositTotal;
   const installmentBalance = verifiedBalanceTotal;
 
   // ── Insert order ──────────────────────────────────────────────────────────
   const paystackRef = `SCR-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+  const baseUrl = getAppBaseUrl();
 
   const { data: order, error: orderErr } = await (supabase.from("orders") as any)
     .insert({
       user_id: user.id,
-      status: remainingTotal === 0 ? "paid" : "pending_payment",
-      delivery_address: address as unknown as Record<string, unknown>,
+      status: amountToPayOnline === 0 ? (paymentMethod === "pod" ? "pending_delivery" : "paid") : "pending_payment",
+      delivery_address: { ...address, paymentMethod } as unknown as Record<string, unknown>,
       subtotal,
       delivery_fee: deliveryFee,
       total,
-      paystack_ref: remainingTotal === 0 ? null : paystackRef,
+      paystack_ref: amountToPayOnline === 0 ? (paymentMethod === "pod" ? `POD-${paystackRef}` : "WALLET") : paystackRef,
       wallet_amount_applied: appliedWalletAmount,
       is_installment: hasInstallment,
       installment_deposit: installmentDeposit,
@@ -252,7 +265,6 @@ export async function placeOrder(
     let finalFrontUrl = installmentDetails.ghanaCardFrontUrl || "N/A";
     let finalBackUrl = installmentDetails.ghanaCardBackUrl || "N/A";
 
-    // Upload base64 photos to Supabase Storage for persistence and performance
     if (finalFrontUrl.startsWith("data:image/")) {
       finalFrontUrl = await uploadGhanaCardImage(finalFrontUrl, `${order.id}_front`);
     }
@@ -308,7 +320,7 @@ export async function placeOrder(
   const env = getServerEnv();
   let authorizationUrl: string | null = null;
 
-  if (remainingTotal > 0 && env.PAYSTACK_SECRET_KEY && !hasInstallment) {
+  if (amountToPayOnline > 0 && env.PAYSTACK_SECRET_KEY && !hasInstallment) {
     const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
@@ -317,35 +329,48 @@ export async function placeOrder(
       },
       body: JSON.stringify({
         email: user.email,
-        amount: Math.round(remainingTotal * 100), // remaining due in pesewas
+        amount: Math.round(amountToPayOnline * 100),
         currency: "GHS",
         reference: paystackRef,
         metadata: {
           orderId: order.id,
           customerName: address.fullName,
+          paymentMethod,
+          isPodDeliveryFee: paymentMethod === "pod",
         },
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/order/${order.id}?ref=${paystackRef}`,
+        callback_url: `${baseUrl}/order/${order.id}?ref=${paystackRef}`,
       }),
     });
 
     if (paystackRes.ok) {
       const json = (await paystackRes.json()) as { data?: { authorization_url?: string } };
       authorizationUrl = json.data?.authorization_url ?? null;
+    } else {
+      const errJson = await paystackRes.json().catch(() => null);
+      console.error("Paystack transaction initialization failed:", paystackRes.status, errJson);
     }
   }
 
-  // Trigger order initiation alerts in background
+  // Trigger order initiation alerts in background using primary scrinhouse.com domain
   if (user.email) {
     const formattedTotal = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(total);
-    const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/track?q=${order.id}`;
-    
-    await sendSMS(
-      address.phone,
-      `Hello ${address.fullName}, your ScrinHouse order has been received! Total: ${formattedTotal}. Ref: ${paystackRef}. Track here: ${trackingLink}`
-    );
+    const trackingLink = `${baseUrl}/track?q=${order.id}`;
+    const formattedDeliveryFee = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(deliveryFee);
 
-    const isPaid = remainingTotal === 0;
-    const shouldAlertAdminNow = hasInstallment || isPaid;
+    if (paymentMethod === "pod") {
+      await sendSMS(
+        address.phone,
+        `Hello ${address.fullName}, your ScrinHouse Accra Payment on Delivery order has been received! Delivery Fee: ${formattedDeliveryFee} (Payable upfront before dispatch). Item balance on delivery: ${new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(subtotal)}. Ref: ${paystackRef}. Track: ${trackingLink}`
+      );
+    } else {
+      await sendSMS(
+        address.phone,
+        `Hello ${address.fullName}, your ScrinHouse order has been received! Total: ${formattedTotal}. Ref: ${paystackRef}. Track here: ${trackingLink}`
+      );
+    }
+
+    const isPaid = amountToPayOnline === 0;
+    const shouldAlertAdminNow = hasInstallment || isPaid || paymentMethod === "pod";
 
     if (shouldAlertAdminNow) {
       const productNames = cartItems
@@ -354,14 +379,14 @@ export async function placeOrder(
 
       await sendSMS(
         "0559257401",
-        `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} (${hasInstallment ? "Installment" : "Regular"}) placed by ${address.fullName} (${address.phone}) is ${isPaid ? "PAID" : "SUBMITTED FOR REVIEW"}. Total: ${formattedTotal}. Items: ${productNames}`
+        `[ADMIN ALERT] New order #${order.id.slice(0, 8).toUpperCase()} (${paymentMethod === "pod" ? "Pay on Delivery (Accra)" : hasInstallment ? "Installment" : "Regular"}) placed by ${address.fullName} (${address.phone}). Total: ${formattedTotal}. Items: ${productNames}`
       );
     }
 
-    // Always dispatch Web Push notification to all admin home screen / browser devices
+    // Dispatch Web Push notification to admin devices
     const productSummary = cartItems.map((item) => `${item.name} (x${item.quantity})`).join(", ");
     await sendAdminOrderPushNotification({
-      title: `🛒 New Order #${order.id.slice(0, 8).toUpperCase()}`,
+      title: `🛒 New Order #${order.id.slice(0, 8).toUpperCase()} ${paymentMethod === "pod" ? "(Accra POD)" : ""}`,
       body: `Placed by ${address.fullName} (${formattedTotal}). Items: ${productSummary}`,
       url: `/admin/orders/${order.id}`,
       orderId: order.id,
@@ -376,15 +401,15 @@ export async function placeOrder(
         <p>Thank you for shopping with ScrinHouse! We have successfully recorded your order.</p>
         <p><strong>Order ID:</strong> #${order.id.slice(0, 8).toUpperCase()}</p>
         <p><strong>Total Amount:</strong> ${formattedTotal}</p>
-        <p><strong>Payment Reference:</strong> ${paystackRef}</p>
-        ${authorizationUrl ? `<p>If you haven't finished payment, you can complete it here: <a href="${authorizationUrl}">Complete Payment</a></p>` : ""}
+        ${paymentMethod === "pod" ? `<p><strong>Payment Option:</strong> Payment on Delivery (Greater Accra). Upfront Delivery Fee: ${formattedDeliveryFee}. Balance on Delivery: ${new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(subtotal)}</p>` : `<p><strong>Payment Reference:</strong> ${paystackRef}</p>`}
+        ${authorizationUrl ? `<p>To complete your ${paymentMethod === "pod" ? "Upfront Delivery Fee" : "Order"} payment: <a href="${authorizationUrl}">Pay ${paymentMethod === "pod" ? formattedDeliveryFee : formattedTotal} via Paystack</a></p>` : ""}
         <p>You can track your order delivery progress anytime: <a href="${trackingLink}">Track Order Progress</a></p>
         <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>
       </div>`
     );
   }
 
-  return { orderId: order.id, paystackRef: remainingTotal === 0 ? "WALLET" : paystackRef, authorizationUrl };
+  return { orderId: order.id, paystackRef: amountToPayOnline === 0 ? "WALLET" : paystackRef, authorizationUrl };
 }
 
 // ─── Delivery Fee Math Helpers ────────────────────────────────────────────────

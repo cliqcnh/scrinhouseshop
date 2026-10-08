@@ -84,6 +84,15 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
   const [landmark, setLandmark]   = useState(defaultAddress?.landmark ?? "");
   
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"paystack" | "pod">("paystack");
+
+  const isAccra = region.toLowerCase().includes("accra");
+
+  useEffect(() => {
+    if (!isAccra && paymentMethod === "pod") {
+      setPaymentMethod("paystack");
+    }
+  }, [region, isAccra, paymentMethod]);
 
   useEffect(() => {
     if (!region) {
@@ -221,7 +230,7 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
       const cartTotal = Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0));
       const walletDeduction = useWallet ? Math.min(walletBalance, cartTotal) : 0;
 
-      const result = await placeOrder(items, address, installmentDetails, walletDeduction);
+      const result = await placeOrder(items, address, installmentDetails, walletDeduction, paymentMethod);
 
       // If Paystack returned a hosted URL → redirect there
       if (result.authorizationUrl) {
@@ -531,6 +540,56 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
             </div>
           </div>
 
+          {/* Payment Option Selection */}
+          <div className="border-t border-border pt-4 space-y-3">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Payment Option
+            </label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("paystack")}
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  paymentMethod === "paystack"
+                    ? "border-foreground bg-foreground text-background font-semibold shadow-sm"
+                    : "border-border bg-background text-foreground hover:bg-muted/40"
+                }`}
+              >
+                <p className="text-xs font-bold">💳 Pay Online</p>
+                <p className="text-[11px] opacity-80 mt-0.5">Mobile Money & Cards</p>
+              </button>
+
+              {isAccra ? (
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("pod")}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    paymentMethod === "pod"
+                      ? "border-foreground bg-foreground text-background font-semibold shadow-sm"
+                      : "border-border bg-background text-foreground hover:bg-muted/40"
+                  }`}
+                >
+                  <p className="text-xs font-bold">🚚 Pay on Delivery</p>
+                  <p className="text-[11px] opacity-80 mt-0.5">Accra Doorstep Delivery</p>
+                </button>
+              ) : (
+                <div className="p-3 rounded-xl border border-border bg-muted/20 opacity-60 text-left">
+                  <p className="text-xs font-bold text-muted-foreground">🚚 Pay on Delivery</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Available for Greater Accra only</p>
+                </div>
+              )}
+            </div>
+
+            {paymentMethod === "pod" && isAccra && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                <p className="font-bold flex items-center gap-1">⚠️ Upfront Delivery Fee Required:</p>
+                <p className="text-[11px] leading-relaxed">
+                  The delivery fee of <strong>{formatPrice(deliveryFee ?? 35)}</strong> must be paid upfront before dispatch. You will pay the remaining item balance of <strong>{formatPrice(subtotal())}</strong> upon delivery!
+                </p>
+              </div>
+            )}
+          </div>
+
           {walletBalance > 0 && (
             <div className="border-t border-border pt-4 space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground cursor-pointer">
@@ -551,8 +610,12 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
           )}
 
           <div className="border-t border-border pt-4 flex justify-between text-sm font-semibold text-foreground">
-            <span>{useWallet ? "Amount Due" : "Total"}</span>
-            <span>{formatPrice(Math.max(0, (subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0)) - (useWallet ? Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0))) : 0)))}</span>
+            <span>{useWallet ? "Amount Due Today" : paymentMethod === "pod" ? "Delivery Fee Payable Now" : "Total"}</span>
+            <span>
+              {paymentMethod === "pod"
+                ? formatPrice(Math.max(0, (deliveryFee ?? 35) - (useWallet ? Math.min(walletBalance, deliveryFee ?? 35) : 0)))
+                : formatPrice(Math.max(0, (subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0)) - (useWallet ? Math.min(walletBalance, Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0) + (deliveryFee ?? 0))) : 0)))}
+            </span>
           </div>
 
           <Button
@@ -563,9 +626,11 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
           >
             {loading 
               ? "Processing…" 
-              : (useWallet && walletBalance >= Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0)))
-                ? "Pay with Wallet" 
-                : "Pay with Paystack"}
+              : paymentMethod === "pod"
+                ? `Pay Delivery Fee (${formatPrice(deliveryFee ?? 35)}) & Confirm Order`
+                : (useWallet && walletBalance >= Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0)))
+                  ? "Pay with Wallet" 
+                  : "Pay with Paystack"}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
