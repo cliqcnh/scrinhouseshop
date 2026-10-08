@@ -37,22 +37,22 @@ export default async function AccountPage({ searchParams }: Props) {
 
   const { welcome, tab = "orders" } = await searchParams;
 
-  // Parallel loading of all dashboard data
+  // Parallel loading of all dashboard data with error resilience
   const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins, careSubs] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, phone, created_at, referral_code")
       .eq("id", user.id)
       .maybeSingle()
-      .then((r) => r.data),
-    getCustomerOrders(),
-    getWishlistProducts(),
-    getAddresses(),
-    getCustomerWarranties(),
+      .then((r) => r.data ?? null),
+    getCustomerOrders().catch(() => []),
+    getWishlistProducts().catch(() => []),
+    getAddresses().catch(() => []),
+    getCustomerWarranties().catch(() => []),
     getWalletDetails().catch(() => ({ balance: 0, referralCode: null, transactions: [], withdrawals: [] })),
-    getCustomerInstallmentApplications(),
-    getCustomerTradeInRequests(),
-    getCustomerCareSubscriptions(),
+    getCustomerInstallmentApplications().catch(() => []),
+    getCustomerTradeInRequests().catch(() => []),
+    getCustomerCareSubscriptions().catch(() => []),
   ]);
 
   // Tab links
