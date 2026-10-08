@@ -27,7 +27,7 @@ export function AdminLoginForm() {
 
     const { data, error } = await supabase.auth.signInWithPassword(values);
     if (error) {
-      setServerError("Incorrect email or password.");
+      setServerError(error.message || "Incorrect email or password.");
       return;
     }
 
