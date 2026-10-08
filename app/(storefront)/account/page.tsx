@@ -58,7 +58,6 @@ export default async function AccountPage({ searchParams }: Props) {
   const tabs = [
     { id: "orders", label: "Orders", icon: Package, count: orders.length },
     { id: "installments", label: "Installment Plans", icon: CreditCard, count: installments.length },
-    { id: "tradeins", label: "Trade-Ins", icon: RefreshCw, count: tradeins.length },
     { id: "care", label: "ScrinHouse Care", icon: Shield, count: careSubs.length },
     { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistProducts.length },
     { id: "wallet", label: "Referrals & Wallet", icon: Wallet, count: 0 },

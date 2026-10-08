@@ -56,7 +56,6 @@ const NAV_SECTIONS = [
     items: [
       { href: "/admin/market-days", label: "Market Days Deals", icon: Flame },
       { href: "/admin/coupons", label: "Discount Coupons", icon: Ticket },
-      { href: "/admin/trade-ins", label: "Trade-Ins & Swaps", icon: RefreshCw },
       { href: "/admin/installments", label: "Installment Plans", icon: CreditCard },
       { href: "/admin/repairs", label: "Device Repairs", icon: Wrench },
       { href: "/admin/care", label: "ScrinHouse Care", icon: Shield },

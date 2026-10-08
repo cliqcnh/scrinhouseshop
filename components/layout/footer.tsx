@@ -3,7 +3,6 @@ import Link from "next/link";
 const FOOTER_LINKS = {
   Shop: [
     { label: "Phones", href: "/category/phones" },
-    { label: "Swap / Trade-In", href: "/trade-in" },
     { label: "Accessories", href: "/category/accessories" },
     { label: "Repair Parts", href: "/category/repair-parts" },
   ],

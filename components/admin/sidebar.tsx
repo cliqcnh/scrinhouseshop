@@ -46,7 +46,6 @@ const NAV_SECTIONS = [
       { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare },
       { href: "/admin/market-days", label: "Market Days", icon: Flame },
       { href: "/admin/installments", label: "Installments", icon: CreditCard },
-      { href: "/admin/trade-ins", label: "Trade-Ins", icon: RefreshCw },
       { href: "/admin/coupons", label: "Coupons", icon: Ticket },
       { href: "/admin/customers", label: "Customers", icon: Users },
       { href: "/admin/wallet", label: "Wallet & Payouts", icon: Wallet },

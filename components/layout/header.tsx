@@ -53,12 +53,6 @@ export async function Header() {
             🔥 Market Days
           </Link>
           <Link
-            href="/trade-in"
-            className="px-3 py-2 text-sm font-semibold text-[#1d4ed8] hover:text-[#1e40af] transition-colors"
-          >
-            Trade-In &amp; Swap
-          </Link>
-          <Link
             href="/repairs"
             className="px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
           >

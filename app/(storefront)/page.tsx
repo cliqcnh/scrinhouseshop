@@ -142,19 +142,13 @@ export default async function HomePage({ searchParams }: Props) {
         <div className="rounded-2xl border border-border bg-muted/10 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <h3 className="font-heading text-xl font-bold text-foreground">
-              Swap your phone or book a repair
+              Book a phone repair or diagnostic
             </h3>
             <p className="text-sm text-muted-foreground max-w-xl">
-              Get a quick swap value for your old device, or book a technician to fix your phone.
+              Book a certified technician to repair your screen, battery, or device with doorstep pickup in Ghana.
             </p>
           </div>
           <div className="flex flex-wrap gap-3 justify-center md:justify-end shrink-0 w-full md:w-auto">
-            <Link
-              href="/trade-in"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white hover:bg-muted text-foreground font-semibold px-5 text-sm shadow-sm transition-colors"
-            >
-              <ArrowLeftRight className="size-4" /> Trade-In &amp; Swap
-            </Link>
             <Link
               href="/repairs"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary hover:bg-primary/95 text-white font-bold px-5 text-sm shadow-sm transition-colors"

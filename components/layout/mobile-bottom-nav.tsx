@@ -38,7 +38,6 @@ interface MobileBottomNavProps {
 
 const QUICK_FEATURE_LINKS = [
   { label: "🔥 Market Days", href: "/market-days", icon: Flame, color: "text-red-500 bg-red-50" },
-  { label: "Trade-In & Swap", href: "/trade-in", icon: RefreshCw, color: "text-blue-600 bg-blue-50" },
   { label: "Repairs Service", href: "/repairs", icon: Wrench, color: "text-amber-600 bg-amber-50" },
   { label: "ScrinHouse Care", href: "/care", icon: Shield, color: "text-emerald-600 bg-emerald-50" },
 ];
