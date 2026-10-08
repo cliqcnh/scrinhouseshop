@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import NextTopLoader from "nextjs-toploader";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -60,6 +61,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${display.variable} ${body.variable} antialiased`}>
+        <NextTopLoader
+          color="#0f172a"
+          initialPosition={0.1}
+          crawlSpeed={150}
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+          shadow="0 0 12px rgba(15,23,42,0.6)"
+          zIndex={99999}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
