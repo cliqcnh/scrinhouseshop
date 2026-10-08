@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Heart, MapPin, ShieldCheck, User, Wallet, CreditCard, RefreshCw, Shield } from "lucide-react";
+import { Package, Heart, CreditCard, ShieldCheck, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/actions/auth/customer";
@@ -57,13 +57,13 @@ export default async function AccountPage({ searchParams }: Props) {
 
   // Tab links
   const tabs = [
-    { id: "orders", label: "Orders", icon: Package, count: orders.length },
-    { id: "installments", label: "Installment Plans", icon: CreditCard, count: installments.length },
-    { id: "care", label: "ScrinHouse Care", icon: Shield, count: careSubs.length },
-    { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistProducts.length },
-    { id: "wallet", label: "Referrals & Wallet", icon: Wallet, count: 0 },
-    { id: "addresses", label: "Addresses", icon: MapPin, count: addresses.length },
-    { id: "warranties", label: "Warranties", icon: ShieldCheck, count: warranties.length },
+    { id: "orders", label: "Orders", count: orders.length },
+    { id: "installments", label: "Installment Plans", count: installments.length },
+    { id: "care", label: "ScrinHouse Care", count: careSubs.length },
+    { id: "wishlist", label: "Wishlist", count: wishlistProducts.length },
+    { id: "wallet", label: "Referrals & Wallet", count: 0 },
+    { id: "addresses", label: "Addresses", count: addresses.length },
+    { id: "warranties", label: "Warranties", count: warranties.length },
   ];
 
   return (
@@ -100,7 +100,6 @@ export default async function AccountPage({ searchParams }: Props) {
                 key={t.id}
                 id={t.id}
                 label={t.label}
-                icon={t.icon}
                 count={t.count}
                 active={tab === t.id}
               />

@@ -1,6 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
+import {
+  Package,
+  CreditCard,
+  Shield,
+  Heart,
+  Wallet,
+  MapPin,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
 
 interface AccountTabWrapperProps {
   activeTab: string;
@@ -20,17 +31,26 @@ export function AccountTabWrapper({ activeTab, children }: AccountTabWrapperProp
   );
 }
 
+const TAB_ICON_MAP: Record<string, LucideIcon> = {
+  orders: Package,
+  installments: CreditCard,
+  care: Shield,
+  wishlist: Heart,
+  wallet: Wallet,
+  addresses: MapPin,
+  warranties: ShieldCheck,
+};
+
 interface AccountTabLinkProps {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
   count?: number;
   active: boolean;
 }
 
-import Link from "next/link";
+export function AccountTabLink({ id, label, count = 0, active }: AccountTabLinkProps) {
+  const Icon = TAB_ICON_MAP[id] ?? Package;
 
-export function AccountTabLink({ id, label, icon: Icon, count = 0, active }: AccountTabLinkProps) {
   return (
     <Link
       href={`/account?tab=${id}`}
