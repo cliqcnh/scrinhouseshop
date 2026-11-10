@@ -130,7 +130,7 @@ export async function createRepairBooking(values: RepairBookingValues): Promise<
   });
 
   const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL?.trim();
-  const adminPhone = process.env.ADMIN_NOTIFICATION_PHONE?.trim();
+  const adminPhone = process.env.ADMIN_NOTIFICATION_PHONE?.trim() || "0559257401";
   if (adminEmail) {
     const pickupAddress = values.pickupAddress;
     await sendEmail(
