@@ -12,10 +12,18 @@ export interface RepairBookingRow {
   customerEmail: string;
   deviceModel: string;
   serviceType: string;
+  issueDescription: string;
   estimatedAmount: number;
   status: string;
   deliveryMethod: string;
   createdAt: string;
+  pickupAddress: {
+    fullName?: string;
+    phone?: string;
+    region?: string;
+    city?: string;
+    landmark?: string | null;
+  } | null;
   technicianId?: string | null;
 }
 
@@ -31,7 +39,7 @@ export async function listAdminRepairs(): Promise<RepairBookingRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("repair_bookings")
-    .select("id, customer_name, customer_phone, customer_email, device_model, service_type, estimated_amount, status, delivery_method, created_at")
+    .select("id, customer_name, customer_phone, customer_email, device_model, service_type, issue_description, estimated_amount, status, delivery_method, pickup_address, created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -45,10 +53,12 @@ export async function listAdminRepairs(): Promise<RepairBookingRow[]> {
     customerEmail: row.customer_email,
     deviceModel: row.device_model,
     serviceType: row.service_type,
+    issueDescription: row.issue_description,
     estimatedAmount: Number(row.estimated_amount),
     status: row.status,
     deliveryMethod: row.delivery_method,
     createdAt: row.created_at,
+    pickupAddress: row.pickup_address,
   }));
 }
 
@@ -93,7 +103,7 @@ export async function updateRepairBooking(
 
   const { data: booking } = await supabase
     .from("repair_bookings")
-    .select("id, customer_name, customer_phone, customer_email, device_model, service_type, status")
+    .select("id, customer_name, customer_phone, customer_email, device_model, service_type, status, estimated_amount")
     .eq("id", id)
     .maybeSingle();
 
@@ -108,8 +118,10 @@ export async function updateRepairBooking(
 
   if (error) return { success: false, error: error.message };
 
-  // Trigger notifications
-  if (booking) {
+  // Notify the customer only when the status actually changes or the quote changes.
+  const statusChanged = Boolean(payload.status && payload.status !== booking?.status);
+  const amountChanged = payload.estimatedAmount !== undefined && payload.estimatedAmount !== Number(booking?.estimated_amount);
+  if (booking && (statusChanged || amountChanged)) {
     const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/track?q=${booking.id}`;
     const readableStatus = (payload.status ?? booking.status).replace(/_/g, " ");
     const updatedAmt = payload.estimatedAmount !== undefined ? payload.estimatedAmount : null;
@@ -121,7 +133,10 @@ export async function updateRepairBooking(
     }
     message += ` Track here: ${trackingLink}`;
 
-    await sendSMS(booking.customer_phone, message);
+    const smsSent = await sendSMS(booking.customer_phone, message);
+    if (!smsSent) {
+      console.error(`Repair status SMS delivery failed for booking ${booking.id}.`);
+    }
 
     await sendEmail(
       booking.customer_email,
@@ -142,6 +157,7 @@ export async function updateRepairBooking(
   revalidatePath(`/admin/repairs`);
   revalidatePath(`/admin/repairs/${id}`);
   revalidatePath(`/track`);
+  revalidatePath(`/account`);
   return { success: true };
 }
 

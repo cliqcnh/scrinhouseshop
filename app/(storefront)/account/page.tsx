@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Heart, CreditCard, ShieldCheck, User } from "lucide-react";
+import { Package, Heart, CreditCard, ShieldCheck, User, Wrench } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/actions/auth/customer";
@@ -12,6 +12,7 @@ import {
   getCustomerInstallmentApplications,
   getCustomerTradeInRequests,
   getCustomerCareSubscriptions,
+  getCustomerRepairs,
 } from "@/actions/storefront/dashboard";
 import { getWishlistProducts } from "@/actions/storefront/wishlist";
 import { getAddresses } from "@/actions/storefront/addresses";
@@ -38,7 +39,7 @@ export default async function AccountPage({ searchParams }: Props) {
   const { welcome, tab = "orders" } = await searchParams;
 
   // Parallel loading of all dashboard data with error resilience
-  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins, careSubs] = await Promise.all([
+  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins, careSubs, repairs] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, phone, created_at, referral_code")
@@ -53,11 +54,13 @@ export default async function AccountPage({ searchParams }: Props) {
     getCustomerInstallmentApplications().catch(() => []),
     getCustomerTradeInRequests().catch(() => []),
     getCustomerCareSubscriptions().catch(() => []),
+    getCustomerRepairs().catch(() => []),
   ]);
 
   // Tab links
   const tabs = [
     { id: "orders", label: "Orders", count: orders.length },
+    { id: "repairs", label: "Repairs", count: repairs.length },
     { id: "installments", label: "Installment Plans", count: installments.length },
     { id: "care", label: "ScrinHouse Care", count: careSubs.length },
     { id: "wishlist", label: "Wishlist", count: wishlistProducts.length },
@@ -177,6 +180,67 @@ export default async function AccountPage({ searchParams }: Props) {
                         </p>
                       </div>
                     </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: REPAIRS */}
+          {tab === "repairs" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">My Repairs</h2>
+              {repairs.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border">
+                  <Wrench className="size-9 text-muted-foreground/30" strokeWidth={1} />
+                  <p className="text-sm text-muted-foreground">You don&apos;t have any repair bookings yet.</p>
+                  <Button size="sm" className="mt-1 rounded-none" render={<Link href="/repairs/book" />}>
+                    Book a repair
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {repairs.map((repair) => (
+                    <div key={repair.id} className="border border-border bg-background p-5 space-y-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="font-semibold text-foreground">{repair.deviceModel}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{repair.serviceType} · {formatDate(repair.createdAt)}</p>
+                        </div>
+                        <span className={`inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                          repair.status === "completed" || repair.status === "delivered"
+                            ? "bg-green-500/10 text-green-700"
+                            : repair.status === "cancelled"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-yellow-500/10 text-yellow-700"
+                        }`}>
+                          {repair.status.replace(/_/g, " ")}
+                        </span>
+                      </div>
+                      <div className="grid gap-3 text-xs sm:grid-cols-2">
+                        <div>
+                          <p className="text-muted-foreground">Issue</p>
+                          <p className="mt-1 whitespace-pre-line text-foreground">{repair.issueDescription}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Estimated amount</p>
+                          <p className="mt-1 font-semibold text-foreground">{formatPrice(repair.estimatedAmount)}</p>
+                          <p className="mt-2 text-muted-foreground capitalize">{repair.deliveryMethod.replace(/_/g, " ")}</p>
+                          {repair.pickupAddress && (
+                            <p className="mt-1 text-foreground">
+                              {repair.pickupAddress.city}, {repair.pickupAddress.region}
+                              {repair.pickupAddress.landmark ? ` · ${repair.pickupAddress.landmark}` : ""}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-border pt-3">
+                        <p className="font-mono text-[10px] text-muted-foreground">#{repair.id.slice(0, 8).toUpperCase()}</p>
+                        <Link href={`/track?q=${repair.id}`} className="text-xs font-semibold underline underline-offset-4">
+                          Track repair
+                        </Link>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

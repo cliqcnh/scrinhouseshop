@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 import { sendSMS, sendEmail } from "@/lib/notifications";
+import { sendAdminOrderPushNotification } from "@/lib/push-notifications";
 
 export interface RepairEstimateItem {
   id: string;
@@ -120,6 +121,43 @@ export async function createRepairBooking(values: RepairBookingValues): Promise<
       <p style="margin-top: 20px; color: #888; text-align: center; font-size: 11px;">&copy; ${new Date().getFullYear()} ScrinHouse GH. All rights reserved.</p>
     </div>`
   );
+
+  await sendAdminOrderPushNotification({
+    title: "New repair booking",
+    body: `${values.customerName} booked ${values.deviceModel} - ${values.serviceType}.`,
+    url: `/admin/repairs/${data.id}`,
+    orderId: data.id,
+  });
+
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL?.trim();
+  const adminPhone = process.env.ADMIN_NOTIFICATION_PHONE?.trim();
+  if (adminEmail) {
+    const pickupAddress = values.pickupAddress;
+    await sendEmail(
+      adminEmail,
+      `New Repair Booking - ${values.deviceModel}`,
+      `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2>New repair booking</h2>
+        <p><strong>Customer:</strong> ${values.customerName}</p>
+        <p><strong>Phone:</strong> ${values.customerPhone}</p>
+        <p><strong>Email:</strong> ${values.customerEmail}</p>
+        <p><strong>Device:</strong> ${values.deviceModel}</p>
+        <p><strong>Service:</strong> ${values.serviceType}</p>
+        <p><strong>Issue:</strong> ${values.issueDescription}</p>
+        <p><strong>Delivery:</strong> ${values.deliveryMethod.replace(/_/g, " ")}</p>
+        ${pickupAddress ? `<p><strong>Pickup location:</strong> ${pickupAddress.city}, ${pickupAddress.region}${pickupAddress.landmark ? ` (${pickupAddress.landmark})` : ""}</p>` : ""}
+        <p><a href="${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/admin/repairs/${data.id}">Open repair booking</a></p>
+      </div>`
+    );
+  }
+
+  if (adminPhone) {
+    const sent = await sendSMS(
+      adminPhone,
+      `New ScrinHouse repair booking: ${values.customerName} booked ${values.deviceModel} (${values.serviceType}). Booking #${data.id.slice(0, 8).toUpperCase()}.`
+    );
+    if (!sent) console.error("Admin repair booking SMS delivery failed.");
+  }
 
   revalidatePath("/account");
   return { success: true, bookingId: data.id };

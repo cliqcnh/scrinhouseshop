@@ -203,6 +203,7 @@ export function RepairsManagerClient({ initialBookings, initialEstimates }: Prop
                     <th className="px-4 py-3">Booking ID</th>
                     <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Device / Issue</th>
+                    <th className="px-4 py-3">Pickup Location</th>
                     <th className="px-4 py-3">Estimated Cost</th>
                     <th className="px-4 py-3">Date Booked</th>
                     <th className="px-4 py-3">Status</th>
@@ -218,10 +219,22 @@ export function RepairsManagerClient({ initialBookings, initialEstimates }: Prop
                       <td className="px-4 py-3.5">
                         <p className="font-medium text-foreground">{b.customerName}</p>
                         <p className="text-xs text-muted-foreground font-mono mt-0.5">{b.customerPhone}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{b.customerEmail}</p>
                       </td>
                       <td className="px-4 py-3.5">
                         <p className="font-semibold text-foreground">{b.deviceModel}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{b.serviceType}</p>
+                        <p className="max-w-xs truncate text-xs text-muted-foreground mt-0.5" title={b.issueDescription}>{b.issueDescription}</p>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                        {b.deliveryMethod === "pickup_delivery" && b.pickupAddress ? (
+                          <>
+                            <p className="font-medium text-foreground">{b.pickupAddress.city}, {b.pickupAddress.region}</p>
+                            {b.pickupAddress.landmark && <p className="mt-0.5">{b.pickupAddress.landmark}</p>}
+                          </>
+                        ) : (
+                          <span className="capitalize">{b.deliveryMethod.replace(/_/g, " ")}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 font-semibold text-foreground">
                         {formatPrice(b.estimatedAmount)}

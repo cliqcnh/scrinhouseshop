@@ -20,6 +20,69 @@ export async function getCustomerOrders(): Promise<OrderRow[]> {
   return data ?? [];
 }
 
+export interface CustomerRepairBooking {
+  id: string;
+  deviceModel: string;
+  serviceType: string;
+  issueDescription: string;
+  estimatedAmount: number;
+  status: string;
+  deliveryMethod: string;
+  pickupAddress: {
+    fullName?: string;
+    phone?: string;
+    region?: string;
+    city?: string;
+    landmark?: string | null;
+  } | null;
+  createdAt: string;
+}
+
+export async function getCustomerRepairs(): Promise<CustomerRepairBooking[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const ownedQuery = supabase
+    .from("repair_bookings")
+    .select("id, device_model, service_type, issue_description, estimated_amount, status, delivery_method, pickup_address, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const emailQuery = user.email
+    ? supabase
+        .from("repair_bookings")
+        .select("id, device_model, service_type, issue_description, estimated_amount, status, delivery_method, pickup_address, created_at")
+        .is("user_id", null)
+        .ilike("customer_email", user.email)
+        .order("created_at", { ascending: false })
+    : Promise.resolve({ data: [], error: null });
+
+  const [{ data: owned, error: ownedError }, { data: emailMatches, error: emailError }] = await Promise.all([
+    ownedQuery,
+    emailQuery,
+  ]);
+
+  if (ownedError) console.error("Failed to load customer repairs:", ownedError.message);
+  if (emailError) console.error("Failed to load guest repairs by email:", emailError.message);
+
+  const repairs = [...(owned ?? []), ...(emailMatches ?? [])].filter(
+    (repair, index, all) => all.findIndex((candidate) => candidate.id === repair.id) === index,
+  );
+
+  return repairs.map((repair) => ({
+    id: repair.id,
+    deviceModel: repair.device_model,
+    serviceType: repair.service_type,
+    issueDescription: repair.issue_description,
+    estimatedAmount: Number(repair.estimated_amount),
+    status: repair.status,
+    deliveryMethod: repair.delivery_method,
+    pickupAddress: repair.pickup_address,
+    createdAt: repair.created_at,
+  }));
+}
+
 export async function getCustomerWarranties() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
