@@ -75,9 +75,10 @@ export async function signOut(): Promise<void> {
 
 export async function signInWithGoogle(next?: string): Promise<{ error: string | null; url?: string }> {
   const headerList = await headers();
-  const host = headerList.get("host");
+  const host = headerList.get("x-forwarded-host") || headerList.get("host");
   const proto = headerList.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
-  const currentOrigin = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  const currentOrigin = configuredOrigin || (host ? `${proto}://${host}` : "http://localhost:3000");
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {

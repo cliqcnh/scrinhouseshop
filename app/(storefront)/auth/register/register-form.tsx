@@ -68,21 +68,9 @@ export function RegisterForm({ next }: Props) {
     try {
       setErrorMsg(null);
       setGoogleLoading(true);
-      const supabase = createClient();
-
-      const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: callbackUrl,
-        },
-      });
-
-      if (oauthError) {
-        const res = await signInWithGoogle(destination);
-        if (res?.error) {
-          setErrorMsg(res.error);
-        }
+      const res = await signInWithGoogle(destination);
+      if (res?.error) {
+        setErrorMsg(res.error);
       }
     } catch (err: unknown) {
       if (err && typeof err === "object" && ("digest" in err || "message" in err)) {
