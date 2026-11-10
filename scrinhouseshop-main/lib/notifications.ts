@@ -1,0 +1,177 @@
+/**
+ * Normalizes Ghanaian phone numbers to international format (233XXXXXXXXX).
+ * Handles: +23324..., 23324..., 024..., 24...
+ */
+export function normalizePhoneNumber(phone: string): string {
+  const clean = phone.replace(/[^0-9+]/g, "");
+  
+  if (clean.startsWith("+")) {
+    return clean.slice(1);
+  }
+  if (clean.startsWith("233")) {
+    return clean;
+  }
+  if (clean.startsWith("0")) {
+    return "233" + clean.slice(1);
+  }
+  // Fallback prefix if it looks like a 9 digit local number
+  if (clean.length === 9) {
+    return "233" + clean;
+  }
+  return clean;
+}
+
+/**
+ * Sends SMS via Wigal Frog SMS API Gateway (Ghana) or Arkesel SMS API.
+ * If no SMS keys are configured, outputs to system logs.
+ */
+export async function sendSMS(to: string, message: string): Promise<boolean> {
+  const wigalApiKey = process.env.WIGAL_API_KEY?.trim();
+  const wigalUsername = process.env.WIGAL_USERNAME?.trim();
+  const wigalPassword = process.env.WIGAL_PASSWORD?.trim();
+  const arkeselApiKey = process.env.SMS_API_KEY?.trim();
+  const senderId = (process.env.SMS_SENDER_ID || "ScrinHouse").trim();
+  const normalizedTo = normalizePhoneNumber(to);
+
+  // If no SMS gateway keys configured, mock log to console
+  if (!wigalApiKey && !wigalUsername && !arkeselApiKey) {
+    console.log(`[MOCK SMS] To: ${normalizedTo} | Sender: ${senderId}\nMessage: "${message}"\n`);
+    return true;
+  }
+
+  try {
+    console.log(`[SMS DEBUG] Gateway initialized. Username: "${wigalUsername}", SenderId: "${senderId}" (length: ${senderId.length}), API-Key length: ${wigalApiKey?.length ?? 0}, Key preview: ${wigalApiKey ? wigalApiKey.slice(0, 6) + '...' + wigalApiKey.slice(-4) : 'none'}`);
+    // 1. Wigal Frog Gateway Integration (Ghana)
+    if (wigalApiKey || (wigalUsername && wigalPassword)) {
+      const endpoint = process.env.WIGAL_SMS_URL || "https://frogapi.wigal.com.gh/api/v3/sms/send";
+      const isV3 = endpoint.includes("frogapi.wigal.com.gh") || endpoint.includes("v3");
+
+      let res;
+      if (isV3) {
+        // Wigal FROG API v3
+        const payload = {
+          senderid: senderId,
+          message,
+          smstype: "text",
+          destinations: [
+            {
+              destination: normalizedTo,
+              msgid: `${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            }
+          ],
+        };
+
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "API-KEY": wigalApiKey || "",
+            "USERNAME": wigalUsername || "",
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Legacy fallback
+        const payload = wigalApiKey
+          ? {
+              key: wigalApiKey,
+              sender: senderId,
+              destinations: [normalizedTo],
+              to: normalizedTo,
+              message,
+            }
+          : {
+              username: wigalUsername,
+              password: wigalPassword,
+              sender: senderId,
+              destinations: [normalizedTo],
+              to: normalizedTo,
+              message,
+            };
+
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(wigalApiKey ? { "Authorization": `Bearer ${wigalApiKey}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      const resText = await res.text();
+      console.log("Wigal SMS Response:", resText);
+      if (!res.ok) {
+        console.error(`Wigal SMS delivery error: HTTP ${res.status} - ${resText}`);
+        return false;
+      }
+      return true;
+    }
+
+    // 2. Arkesel Gateway Integration Fallback
+    const res = await fetch("https://sms.arkesel.com/api/v2/sms/send", {
+      method: "POST",
+      headers: {
+        "api-key": arkeselApiKey!,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: senderId,
+        message,
+        recipients: [normalizedTo],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Arkesel SMS delivery error: HTTP ${res.status} - ${errText}`);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("SMS notification exception:", err);
+    return false;
+  }
+}
+
+/**
+ * Sends Email via Resend API.
+ * If RESEND_API_KEY is not defined, outputs to system logs.
+ */
+export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM || "ScrinHouse <no-reply@scrinhouse.com>";
+
+  if (!apiKey) {
+    console.log(`[MOCK EMAIL] From: ${from} | To: ${to}\nSubject: "${subject}"\nHtml Body:\n${html}\n`);
+    return true;
+  }
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Resend email delivery error: HTTP ${res.status} - ${errText}`);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Email notification exception:", err);
+    return false;
+  }
+}

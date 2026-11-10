@@ -1,0 +1,385 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Package, Heart, CreditCard, ShieldCheck, User } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
+import { signOut } from "@/actions/auth/customer";
+import { formatDate, formatPrice } from "@/utils/format";
+import {
+  getCustomerOrders,
+  getCustomerWarranties,
+  getCustomerInstallmentApplications,
+  getCustomerTradeInRequests,
+  getCustomerCareSubscriptions,
+} from "@/actions/storefront/dashboard";
+import { getWishlistProducts } from "@/actions/storefront/wishlist";
+import { getAddresses } from "@/actions/storefront/addresses";
+import { AddressManagerClient } from "@/components/account/address-manager-client";
+import { ProductCard } from "@/components/shared/product-card";
+import { getWalletDetails } from "@/actions/storefront/wallet";
+import { WalletClient } from "@/components/account/wallet-client";
+import { CustomerTradeInList } from "@/components/account/trade-in-list-client";
+import { CustomerCareList } from "@/components/account/care-list-client";
+import { AccountTabLink, AccountTabWrapper } from "@/components/account/account-tab-wrapper";
+
+export const metadata: Metadata = { title: "My Account" };
+
+interface Props {
+  searchParams: Promise<{ welcome?: string; tab?: string }>;
+}
+
+export default async function AccountPage({ searchParams }: Props) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect("/auth/login?next=/account");
+
+  const { welcome, tab = "orders" } = await searchParams;
+
+  // Parallel loading of all dashboard data with error resilience
+  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins, careSubs] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, phone, created_at, referral_code")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then((r) => r.data ?? null),
+    getCustomerOrders().catch(() => []),
+    getWishlistProducts().catch(() => []),
+    getAddresses().catch(() => []),
+    getCustomerWarranties().catch(() => []),
+    getWalletDetails().catch(() => ({ balance: 0, referralCode: null, transactions: [], withdrawals: [] })),
+    getCustomerInstallmentApplications().catch(() => []),
+    getCustomerTradeInRequests().catch(() => []),
+    getCustomerCareSubscriptions().catch(() => []),
+  ]);
+
+  // Tab links
+  const tabs = [
+    { id: "orders", label: "Orders", count: orders.length },
+    { id: "installments", label: "Installment Plans", count: installments.length },
+    { id: "care", label: "ScrinHouse Care", count: careSubs.length },
+    { id: "wishlist", label: "Wishlist", count: wishlistProducts.length },
+    { id: "wallet", label: "Referrals & Wallet", count: 0 },
+    { id: "addresses", label: "Addresses", count: addresses.length },
+    { id: "warranties", label: "Warranties", count: warranties.length },
+  ];
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      {welcome === "1" && (
+        <div className="mb-6 rounded border border-border bg-muted px-4 py-3 text-sm text-foreground">
+          Welcome to ScrinHouse! Your account is ready.
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border pb-5">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">My Account</h1>
+          <p className="text-xs text-muted-foreground mt-1">Manage your orders, wishlist, addresses and device warranties.</p>
+        </div>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="text-sm text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-12">
+        {/* ── Left Sidebar (col-span-3): Navigation & Profile info ── */}
+        <aside className="md:col-span-3 space-y-6">
+          {/* Tabs Menu */}
+          <nav className="flex flex-row md:flex-col gap-1 border-b md:border-b-0 md:border-r border-border pb-4 md:pb-0 md:pr-4 overflow-x-auto">
+            {tabs.map((t) => (
+              <AccountTabLink
+                key={t.id}
+                id={t.id}
+                label={t.label}
+                count={t.count}
+                active={tab === t.id}
+              />
+            ))}
+          </nav>
+
+          {/* Profile Card */}
+          <section className="border border-border p-5 space-y-3 bg-background">
+            <div className="flex items-center gap-2 border-b border-border pb-3">
+              <User className="size-4 text-muted-foreground" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">My Profile</h2>
+            </div>
+            <dl className="space-y-2 text-xs">
+              <div>
+                <dt className="text-muted-foreground">Full Name</dt>
+                <dd className="text-foreground font-medium mt-0.5">{profile?.full_name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Email</dt>
+                <dd className="text-foreground font-medium mt-0.5 truncate">{user.email}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Phone</dt>
+                <dd className="text-foreground font-medium mt-0.5">{profile?.phone ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Member Since</dt>
+                <dd className="text-foreground font-medium mt-0.5">
+                  {profile?.created_at ? formatDate(profile.created_at) : "—"}
+                </dd>
+              </div>
+            </dl>
+          </section>
+        </aside>
+
+        {/* ── Right Content Area (col-span-9) ── */}
+        <main className="md:col-span-9">
+          <AccountTabWrapper activeTab={tab}>
+          {/* TAB: ORDERS */}
+          {tab === "orders" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Order History</h2>
+              {orders.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border">
+                  <Package className="size-9 text-muted-foreground/30" strokeWidth={1} />
+                  <p className="text-sm text-muted-foreground">You haven&apos;t placed any orders yet.</p>
+                  <Button size="sm" className="mt-1 rounded-none" render={<Link href="/category/phones" />}>
+                    Shop now
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y divide-border border border-border">
+                  {orders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href={`/order/${order.id}`}
+                      className="flex items-center justify-between px-5 py-4 text-sm hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-semibold text-foreground">Order #{order.id.slice(0, 8).toUpperCase()}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(order.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="font-semibold text-foreground">{formatPrice(order.total)}</p>
+                        <p className={`text-xs font-medium capitalize rounded-full px-2 py-0.5 inline-block ${
+                          order.status === "paid" || order.status === "delivered"
+                            ? "bg-green-500/10 text-green-700"
+                            : order.status === "cancelled"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-yellow-500/10 text-yellow-700"
+                        }`}>
+                          {order.status.replace(/_/g, " ")}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: WISHLIST */}
+          {tab === "wishlist" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">My Wishlist</h2>
+              {wishlistProducts.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border">
+                  <Heart className="size-9 text-muted-foreground/30" strokeWidth={1} />
+                  <p className="text-sm text-muted-foreground">Your wishlist is empty.</p>
+                  <Button size="sm" className="mt-1 rounded-none" render={<Link href="/category/phones" />}>
+                    Add items
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3">
+                  {wishlistProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: INSTALLMENTS */}
+          {tab === "installments" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Installment Plans</h2>
+              {installments.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border bg-background">
+                  <CreditCard className="size-9 text-muted-foreground/30" strokeWidth={1} />
+                  <p className="text-sm text-muted-foreground">You don&apos;t have any active hire-purchase agreements.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto border border-border bg-background rounded">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/20">
+                        <th className="px-4 py-3">Product Name</th>
+                        <th className="px-4 py-3">Total Value</th>
+                        <th className="px-4 py-3">Down Payment</th>
+                        <th className="px-4 py-3">Remaining Balance</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {installments.map((inst) => {
+                        return (
+                          <tr key={inst.id} className="hover:bg-muted/30">
+                            <td className="px-4 py-3.5 font-medium text-foreground">
+                              {inst.productName}
+                              <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                Order: #{inst.orderId.slice(0, 8).toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-foreground font-semibold">
+                              {formatPrice(inst.totalPrice)}
+                            </td>
+                            <td className="px-4 py-3.5 text-muted-foreground">
+                              {formatPrice(inst.depositAmount)}
+                            </td>
+                            <td className="px-4 py-3.5 text-muted-foreground font-medium">
+                              {formatPrice(inst.remainingBalance)}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                inst.status === "approved"
+                                  ? "bg-green-500/10 text-green-700"
+                                  : inst.status === "rejected"
+                                  ? "bg-red-500/10 text-red-700"
+                                  : "bg-yellow-500/10 text-yellow-700"
+                              }`}>
+                                {inst.status.replace(/_/g, " ")}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-right">
+                              {inst.status === "approved" && inst.orderStatus === "pending_payment" ? (
+                                <Link
+                                  href={`/order/${inst.orderId}`}
+                                  className="inline-flex items-center justify-center border border-foreground bg-foreground text-background px-3 py-1.5 text-xs font-semibold hover:bg-foreground/90 uppercase tracking-wider transition-colors rounded-none"
+                                >
+                                  Pay Deposit
+                                </Link>
+                              ) : inst.status === "approved" && inst.orderStatus === "paid" ? (
+                                <span className="text-xs text-green-600 font-semibold flex items-center justify-end gap-1">
+                                  ✓ Deposit Paid
+                                </span>
+                              ) : inst.status === "approved" ? (
+                                <span className="text-xs text-muted-foreground">Active Plan</span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: TRADE-INS */}
+          {tab === "tradeins" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Device Trade-Ins</h2>
+              <CustomerTradeInList initialItems={tradeins} />
+            </div>
+          )}
+
+          {/* TAB: CARE */}
+          {tab === "care" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">ScrinHouse Care Protection</h2>
+              <CustomerCareList subscriptions={careSubs} />
+            </div>
+          )}
+
+          {/* TAB: WALLET */}
+          {tab === "wallet" && (
+            <div className="space-y-4">
+              <WalletClient initialDetails={walletDetails} />
+            </div>
+          )}
+
+          {/* TAB: ADDRESSES */}
+          {tab === "addresses" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Saved Addresses</h2>
+              <AddressManagerClient initialAddresses={addresses} />
+            </div>
+          )}
+
+          {/* TAB: WARRANTIES */}
+          {tab === "warranties" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Product Warranties</h2>
+              {warranties.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border">
+                  <ShieldCheck className="size-9 text-muted-foreground/30" strokeWidth={1} />
+                  <p className="text-sm text-muted-foreground">You don&apos;t have any active warranties registered.</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">Warranties are automatically generated and linked to your account when purchasing phones.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto border border-border bg-background rounded">
+                  <table className="w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/20">
+                        <th className="px-4 py-3">Product</th>
+                        <th className="px-4 py-3">IMEI / Serial</th>
+                        <th className="px-4 py-3">Duration</th>
+                        <th className="px-4 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {warranties.map((w) => {
+                        const daysLeft = Math.max(
+                          0,
+                          Math.ceil((new Date(w.endsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                        );
+                        return (
+                          <tr key={w.id} className="hover:bg-muted/30">
+                            <td className="px-4 py-3.5 font-medium text-foreground">
+                              {w.productSlug ? (
+                                <Link href={`/products/${w.productSlug}`} className="hover:underline">
+                                  {w.productName}
+                                </Link>
+                              ) : (
+                                w.productName
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-muted-foreground font-mono text-xs">{w.imeiSerial}</td>
+                            <td className="px-4 py-3.5 text-muted-foreground">
+                              <p className="text-xs">{formatDate(w.startsAt)} to</p>
+                              <p className="text-xs font-semibold text-foreground">{formatDate(w.endsAt)}</p>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                w.status === "active" && daysLeft > 0
+                                  ? "bg-green-500/10 text-green-700"
+                                  : "bg-yellow-500/10 text-yellow-700"
+                              }`}>
+                                {w.status === "active" && daysLeft > 0 ? `Active (${daysLeft}d left)` : "Expired"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+          </AccountTabWrapper>
+        </main>
+      </div>
+    </div>
+  );
+}

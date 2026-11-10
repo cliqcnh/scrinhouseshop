@@ -1,0 +1,66 @@
+import { cookies, headers } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { getServerEnv } from "@/lib/env";
+import type { Database } from "@/types/database";
+
+/**
+ * Supabase client for use in Server Components, Server Actions, and Route
+ * Handlers. Must be created fresh per-request (relies on the request's
+ * cookie jar for auth), so never cache/reuse the return value across requests.
+ */
+export async function createClient() {
+  const env = getServerEnv();
+  const [cookieStore, headerList] = await Promise.all([
+    cookies(),
+    headers().catch(() => null),
+  ]);
+
+  const host = headerList?.get("x-forwarded-host") || headerList?.get("host");
+  const isScrinhouse = host?.endsWith("scrinhouse.com");
+  const cookieDomain = isScrinhouse ? ".scrinhouse.com" : undefined;
+
+  return createServerClient<Database>(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookieOptions: cookieDomain ? { domain: cookieDomain } : undefined,
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              const opts = cookieDomain ? { ...options, domain: cookieDomain } : options;
+              cookieStore.set(name, value, opts);
+            });
+          } catch {
+            // Called from a Server Component — safe to ignore because
+            // middleware refreshes the session on every request.
+          }
+        },
+      },
+    },
+  );
+}
+
+/**
+ * Public, cookie-free client for caching and static operations.
+ * Respects RLS (uses the public anon key) but bypasses cookie jar reads
+ * to avoid Next.js static bailing or background thread cookies() failures.
+ */
+export function createPublicClient() {
+  const env = getServerEnv();
+  return createServerClient<Database>(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    },
+  );
+}
+
+export { createServiceRoleClient } from "./service-role";

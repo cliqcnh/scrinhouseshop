@@ -1,0 +1,371 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use server";
+
+import { revalidatePath, revalidateTag } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { requireStaffUser } from "@/lib/supabase/admin-guard";
+import { sendSMS } from "@/lib/notifications";
+
+export interface InstallmentPaymentRow {
+  id: string;
+  amount: number;
+  paymentMethod: string;
+  paymentRef: string | null;
+  createdAt: string;
+}
+
+export interface InstallmentApplicationRow {
+  id: string;
+  orderId: string;
+  userId: string | null;
+  applicantName: string;
+  applicantPhone: string;
+  productName: string;
+  productImage: string | null;
+  basePrice: number;
+  totalPrice: number;
+  depositAmount: number;
+  remainingBalance: number;
+  ghanaCardNumber: string;
+  ghanaCardFrontUrl: string;
+  ghanaCardBackUrl: string;
+  status: "pending_review" | "approved" | "rejected" | "completed";
+  notes: string | null;
+  createdAt: string;
+  installmentFrequency: "monthly" | "weekend";
+  payments: InstallmentPaymentRow[];
+}
+
+export async function listInstallmentApplications(): Promise<InstallmentApplicationRow[]> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { data, error } = await (supabase.from("installment_applications") as any)
+    .select(`
+      id,
+      order_id,
+      user_id,
+      base_price,
+      total_price,
+      deposit_amount,
+      remaining_balance,
+      ghana_card_number,
+      ghana_card_front_url,
+      ghana_card_back_url,
+      status,
+      notes,
+      created_at,
+      installment_frequency,
+      profiles (full_name, phone),
+      products (name),
+      installment_payments (id, amount, payment_method, payment_ref, created_at)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to list installment applications:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    orderId: row.order_id,
+    userId: row.user_id,
+    applicantName: row.profiles?.full_name ?? "Customer",
+    applicantPhone: row.profiles?.phone ?? "N/A",
+    productName: row.products?.name ?? "Smartphone",
+    productImage: null,
+    basePrice: Number(row.base_price),
+    totalPrice: Number(row.total_price),
+    depositAmount: Number(row.deposit_amount),
+    remainingBalance: Number(row.remaining_balance),
+    ghanaCardNumber: row.ghana_card_number,
+    ghanaCardFrontUrl: row.ghana_card_front_url,
+    ghanaCardBackUrl: row.ghana_card_back_url,
+    status: row.status,
+    notes: row.notes,
+    createdAt: row.created_at,
+    installmentFrequency: row.installment_frequency || "monthly",
+    payments: (row.installment_payments ?? []).map((p: any) => ({
+      id: p.id,
+      amount: Number(p.amount),
+      paymentMethod: p.payment_method,
+      paymentRef: p.payment_ref,
+      createdAt: p.created_at,
+    })),
+  }));
+}
+
+import { DEFAULT_INSTALLMENT_CONFIG, type InstallmentConfig } from "@/lib/installments";
+
+export async function getInstallmentConfig(): Promise<InstallmentConfig> {
+  const supabase = await createClient();
+
+  const { data, error } = await (supabase.from("store_settings") as any)
+    .select("value")
+    .eq("key", "installment_config")
+    .maybeSingle();
+
+  if (error || !data) {
+    return DEFAULT_INSTALLMENT_CONFIG;
+  }
+
+  const val = (data as any).value;
+  return {
+    profitPercentage: val.profit_percentage ?? 20,
+    depositPercentage: val.deposit_percentage ?? 40,
+    isEnabled: val.is_enabled ?? true,
+    durationMonths: val.duration_months ?? 3,
+  };
+}
+
+export async function saveInstallmentConfig(
+  config: InstallmentConfig,
+): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const payload = {
+    profit_percentage: config.profitPercentage,
+    deposit_percentage: config.depositPercentage,
+    is_enabled: config.isEnabled ?? true,
+    duration_months: config.durationMonths ?? 3,
+  };
+
+  const { error } = await (supabase.from("store_settings") as any).upsert({
+    key: "installment_config",
+    value: payload,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin/installments");
+  revalidatePath("/");
+  revalidatePath("/products/[slug]");
+  revalidateTag("products");
+  return { success: true };
+}
+
+export async function updateInstallmentStatus(
+  id: string,
+  status: "pending_review" | "approved" | "rejected" | "completed",
+  notes?: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { data: appRow } = await (supabase
+    .from("installment_applications") as any)
+    .select(`
+      deposit_amount,
+      orders:order_id (
+        id,
+        delivery_address
+      )
+    `)
+    .eq("id", id)
+    .maybeSingle();
+
+  const { error } = await (supabase.from("installment_applications") as any)
+    .update({ status, notes: notes ?? null, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  // Trigger customer alert
+  if (appRow) {
+    const address = appRow.orders?.delivery_address as any ?? {};
+    const fullName = address.fullName || "Customer";
+    const phone = address.phone;
+    const orderId = appRow.orders?.id;
+    const shortOrderId = orderId ? orderId.slice(0, 8).toUpperCase() : "";
+    const deposit = Number(appRow.deposit_amount || 0).toFixed(2);
+    const orderLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/order/${orderId}`;
+
+    if (phone) {
+      if (status === "approved") {
+        await sendSMS(
+          phone,
+          `Hi ${fullName}, your ScrinHouse installment application for order #${shortOrderId} has been approved! Complete your down payment of GH₵${deposit} here: ${orderLink}`
+        );
+      } else if (status === "rejected") {
+        await sendSMS(
+          phone,
+          `Hi ${fullName}, your ScrinHouse installment application for order #${shortOrderId} was not approved. Notes: ${notes ?? "No reasons specified."} Check details: ${orderLink}`
+        );
+      }
+    }
+  }
+
+  revalidatePath("/admin/installments");
+  return { success: true };
+}
+
+export interface ProductInstallmentConfigRow {
+  id: string;
+  name: string;
+  sku: string;
+  productType: string;
+  allowInstallments: boolean;
+  installmentProfitPercentage: number | null;
+  installmentDepositPercentage: number | null;
+  categoryName: string | null;
+  categorySlug: string | null;
+}
+
+export async function listProductsForInstallments(searchQuery?: string): Promise<ProductInstallmentConfigRow[]> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("products")
+    .select("id, name, sku, product_type, allow_installments, installment_profit_percentage, installment_deposit_percentage, categories:categories!products_category_id_fkey(name, slug)")
+    .order("name", { ascending: true });
+
+  if (searchQuery && searchQuery.trim() !== "") {
+    query = query.ilike("name", `%${searchQuery.trim()}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Failed to load products for installments:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    sku: row.sku,
+    productType: row.product_type,
+    allowInstallments: row.allow_installments,
+    installmentProfitPercentage: row.installment_profit_percentage,
+    installmentDepositPercentage: row.installment_deposit_percentage,
+    categoryName: row.categories?.name ?? null,
+    categorySlug: row.categories?.slug ?? null,
+  }));
+}
+
+export async function updateProductInstallmentConfig(
+  productId: string,
+  allowInstallments: boolean,
+  profitPercentage: number | null,
+  depositPercentage: number | null,
+): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("products")
+    .update({
+      allow_installments: allowInstallments,
+      installment_profit_percentage: profitPercentage,
+      installment_deposit_percentage: depositPercentage,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", productId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin/installments");
+  revalidatePath("/");
+  revalidatePath("/products/[slug]");
+  revalidateTag("products");
+  return { success: true };
+}
+
+// ─── Delivery Configuration ──────────────────────────────────────────────────
+
+export interface DeliveryConfig {
+  phones_accra: number;
+  phones_outside: number;
+  consoles_accra: number;
+  consoles_outside: number;
+  others_accra: number;
+  others_outside: number;
+}
+
+export async function getDeliveryConfig(): Promise<DeliveryConfig> {
+  const supabase = await createClient();
+
+  const { data } = await (supabase.from("store_settings") as any)
+    .select("value")
+    .eq("key", "delivery_config")
+    .maybeSingle();
+
+  if (!data) {
+    return {
+      phones_accra: 35,
+      phones_outside: 70,
+      consoles_accra: 50,
+      consoles_outside: 100,
+      others_accra: 25,
+      others_outside: 50,
+    };
+  }
+
+  const val = (data as any).value;
+  return {
+    phones_accra: Number(val.phones_accra ?? 35),
+    phones_outside: Number(val.phones_outside ?? 70),
+    consoles_accra: Number(val.consoles_accra ?? 50),
+    consoles_outside: Number(val.consoles_outside ?? 100),
+    others_accra: Number(val.others_accra ?? 25),
+    others_outside: Number(val.others_outside ?? 50),
+  };
+}
+
+export async function saveDeliveryConfig(config: DeliveryConfig): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error } = await (supabase.from("store_settings") as any)
+    .upsert({
+      key: "delivery_config",
+      value: {
+        phones_accra: config.phones_accra,
+        phones_outside: config.phones_outside,
+        consoles_accra: config.consoles_accra,
+        consoles_outside: config.consoles_outside,
+        others_accra: config.others_accra,
+        others_outside: config.others_outside,
+      },
+    });
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/admin/installments");
+  revalidatePath("/checkout");
+  return { success: true };
+}
+
+export async function recordInstallmentPayment(
+  applicationId: string,
+  amount: number,
+  paymentMethod: string = "manual",
+  paymentRef?: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireStaffUser();
+  const supabase = await createClient();
+
+  const { error } = await (supabase.from("installment_payments") as any).insert({
+    application_id: applicationId,
+    amount,
+    payment_method: paymentMethod,
+    payment_ref: paymentRef || `MAN-${Date.now()}`,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin/installments");
+  revalidatePath("/account");
+  return { success: true };
+}

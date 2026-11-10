@@ -1,0 +1,350 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Check, Trash2, Eye, EyeOff, Star, StarOff, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/utils/format";
+import { bulkUpdateProducts, updateProductPriceQuick } from "@/actions/admin/products";
+import type { AdminProductRow } from "@/services/admin-service";
+
+interface ProductsListTableProps {
+  initialProducts: AdminProductRow[];
+}
+
+export function ProductsListTable({ initialProducts }: ProductsListTableProps) {
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
+  // Toggle single selection
+  function handleSelectRow(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  }
+
+  // Toggle select all
+  function handleSelectAll() {
+    if (selectedIds.length === initialProducts.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(initialProducts.map((p) => p.id));
+    }
+  }
+
+  // Handle bulk action
+  async function handleBulkAction(action: "delete" | "active" | "inactive" | "featured" | "unfeatured") {
+    if (selectedIds.length === 0) return;
+    setProcessing(true);
+
+    try {
+      const res = await bulkUpdateProducts(selectedIds, action);
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to perform bulk update.");
+        return;
+      }
+
+      toast.success(`Successfully updated ${selectedIds.length} products.`);
+      setSelectedIds([]);
+      setShowConfirmDelete(false);
+      router.refresh();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+      toast.error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* ── Bulk Actions Floating Toolbar ── */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/20 bg-primary/5 p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <Check className="size-4" />
+            <span>{selectedIds.length} {selectedIds.length === 1 ? "product" : "products"} selected</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={processing}
+              onClick={() => handleBulkAction("active")}
+              className="gap-1.5 text-xs"
+            >
+              <Eye className="size-3.5" /> Enable (Show on Store)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={processing}
+              onClick={() => handleBulkAction("inactive")}
+              className="gap-1.5 text-xs"
+            >
+              <EyeOff className="size-3.5" /> Disable (Hide from Store)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={processing}
+              onClick={() => handleBulkAction("featured")}
+              className="gap-1.5 text-xs"
+            >
+              <Star className="size-3.5 text-yellow-500 fill-yellow-500" /> Feature
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={processing}
+              onClick={() => handleBulkAction("unfeatured")}
+              className="gap-1.5 text-xs"
+            >
+              <StarOff className="size-3.5" /> Remove Featured
+            </Button>
+            
+            {showConfirmDelete ? (
+              <div className="flex items-center gap-1.5 bg-destructive/10 p-1 rounded border border-destructive/20 animate-in zoom-in-95 duration-100">
+                <span className="text-xs text-destructive font-semibold px-2">Are you sure?</span>
+                <Button
+                  variant="destructive"
+                  size="xs"
+                  disabled={processing}
+                  onClick={() => handleBulkAction("delete")}
+                  className="text-xs px-2.5"
+                >
+                  {processing ? <Loader2 className="size-3 animate-spin" /> : "Yes, Delete"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={processing}
+                  onClick={() => setShowConfirmDelete(false)}
+                  className="text-xs px-2.5"
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={processing}
+                onClick={() => setShowConfirmDelete(true)}
+                className="gap-1.5 text-xs"
+              >
+                <Trash2 className="size-3.5" /> Delete Selected
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile View: Touch Cards ── */}
+      <div className="grid grid-cols-1 gap-3 md:hidden">
+        {initialProducts.map((product) => {
+          const isSelected = selectedIds.includes(product.id);
+          return (
+            <div
+              key={product.id}
+              className={`rounded-xl border p-4 transition-all bg-background space-y-3 ${
+                isSelected ? "border-primary bg-primary/5 shadow-xs" : "border-border"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleSelectRow(product.id)}
+                    className="mt-1 size-5 rounded border-gray-300 accent-primary cursor-pointer shrink-0"
+                  />
+                  <div className="relative size-12 shrink-0 overflow-hidden rounded bg-muted border border-border">
+                    {product.primaryImageUrl && (
+                      <Image src={product.primaryImageUrl} alt="" fill className="object-cover" sizes="48px" />
+                    )}
+                  </div>
+                  <div>
+                    <Link href={`/admin/products/${product.id}`} className="font-semibold text-foreground hover:underline text-sm line-clamp-2">
+                      {product.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">{product.sku}</p>
+                  </div>
+                </div>
+
+                <Link href={`/admin/products/${product.id}`}>
+                  <Button variant="outline" size="xs" className="text-xs shrink-0">
+                    Edit
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Price (GH₵)</p>
+                  <InlinePriceEditor
+                    key={`mob-${product.id}-${product.basePrice}`}
+                    productId={product.id}
+                    initialPrice={product.basePrice}
+                  />
+                </div>
+
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Stock</p>
+                  <p className="font-semibold text-foreground text-sm">{product.totalStock}</p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Status</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Badge variant={product.isActive ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                      {product.isActive ? "Active" : "Hidden"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop View: Full Table ── */}
+      <div className="hidden md:block overflow-x-auto rounded-lg border border-border bg-background">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted-foreground bg-muted/10">
+              <th className="w-12 px-4 py-3 text-center">
+                <input
+                  type="checkbox"
+                  checked={initialProducts.length > 0 && selectedIds.length === initialProducts.length}
+                  onChange={handleSelectAll}
+                  className="size-4 rounded border-gray-300 accent-primary cursor-pointer align-middle"
+                />
+              </th>
+              <th className="px-4 py-3">Product</th>
+              <th className="px-4 py-3">Category</th>
+              <th className="px-4 py-3">Price</th>
+              <th className="px-4 py-3">Stock</th>
+              <th className="px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {initialProducts.map((product) => {
+              const isSelected = selectedIds.includes(product.id);
+              return (
+                <tr
+                  key={product.id}
+                  className={`border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${
+                    isSelected ? "bg-primary/5 hover:bg-primary/5" : ""
+                  }`}
+                >
+                  <td className="px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleSelectRow(product.id)}
+                      className="size-4 rounded border-gray-300 accent-primary cursor-pointer align-middle"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/products/${product.id}`} className="flex items-center gap-3">
+                      <div className="relative size-10 shrink-0 overflow-hidden rounded bg-muted border border-border">
+                        {product.primaryImageUrl && (
+                          <Image src={product.primaryImageUrl} alt="" fill className="object-cover" sizes="40px" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground hover:underline">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.sku}</p>
+                      </div>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{product.categoryName ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <InlinePriceEditor
+                      key={`${product.id}-${product.basePrice}`}
+                      productId={product.id}
+                      initialPrice={product.basePrice}
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{product.totalStock}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant={product.isActive ? "default" : "secondary"}>
+                        {product.isActive ? "Active (Visible)" : "Disabled (Hidden)"}
+                      </Badge>
+                      {product.isFeatured && (
+                        <Badge variant="outline" className="border-yellow-500/20 bg-yellow-500/5 text-yellow-700 dark:text-yellow-500">
+                          Featured
+                        </Badge>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline Price Editor Component ───────────────────────────────────────────
+
+function InlinePriceEditor({ productId, initialPrice }: { productId: string; initialPrice: number }) {
+  const [price, setPrice] = useState(initialPrice.toString());
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    const val = parseFloat(price);
+    if (isNaN(val) || val < 0) {
+      toast.error("Please enter a valid price.");
+      setPrice(initialPrice.toString());
+      return;
+    }
+    if (val === initialPrice) return; // No changes
+
+    setSaving(false); // don't block user typing next fields
+    try {
+      const res = await updateProductPriceQuick(productId, val);
+      if (!res.success) {
+        toast.error(res.error ?? "Failed to update price.");
+        setPrice(initialPrice.toString());
+      } else {
+        toast.success("Price updated successfully.");
+      }
+    } catch (err) {
+      toast.error("An error occurred while updating the price.");
+      setPrice(initialPrice.toString());
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs font-semibold text-muted-foreground">GH₵</span>
+      <input
+        type="number"
+        step="0.01"
+        min="0"
+        value={price}
+        disabled={saving}
+        onChange={(e) => setPrice(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
+        className="w-24 rounded border border-border bg-background px-2 py-1 text-sm font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+      />
+    </div>
+  );
+}
