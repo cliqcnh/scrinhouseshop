@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Heart, CreditCard, ShieldCheck, User, Wrench } from "lucide-react";
+import { Package, Heart, CreditCard, ShieldCheck, User, Wrench, RefreshCw, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/actions/auth/customer";
 import { formatDate, formatPrice } from "@/utils/format";
 import {
   getCustomerOrders,
+  getCustomerRepairs,
   getCustomerWarranties,
   getCustomerInstallmentApplications,
   getCustomerTradeInRequests,
   getCustomerCareSubscriptions,
-  getCustomerRepairs,
 } from "@/actions/storefront/dashboard";
 import { getWishlistProducts } from "@/actions/storefront/wishlist";
 import { getAddresses } from "@/actions/storefront/addresses";
@@ -22,7 +22,7 @@ import { getWalletDetails } from "@/actions/storefront/wallet";
 import { WalletClient } from "@/components/account/wallet-client";
 import { CustomerTradeInList } from "@/components/account/trade-in-list-client";
 import { CustomerCareList } from "@/components/account/care-list-client";
-import { AccountTabLink, AccountTabWrapper } from "@/components/account/account-tab-wrapper";
+import { AccountTabLink, AccountTabWrapper, AccountTileCard } from "@/components/account/account-tab-wrapper";
 
 export const metadata: Metadata = { title: "My Account" };
 
@@ -39,7 +39,18 @@ export default async function AccountPage({ searchParams }: Props) {
   const { welcome, tab = "orders" } = await searchParams;
 
   // Parallel loading of all dashboard data with error resilience
-  const [profile, orders, wishlistProducts, addresses, warranties, walletDetails, installments, tradeins, careSubs, repairs] = await Promise.all([
+  const [
+    profile,
+    orders,
+    repairs,
+    wishlistProducts,
+    addresses,
+    warranties,
+    walletDetails,
+    installments,
+    tradeins,
+    careSubs,
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, phone, created_at, referral_code")
@@ -47,6 +58,7 @@ export default async function AccountPage({ searchParams }: Props) {
       .maybeSingle()
       .then((r) => r.data ?? null),
     getCustomerOrders().catch(() => []),
+    getCustomerRepairs().catch(() => []),
     getWishlistProducts().catch(() => []),
     getAddresses().catch(() => []),
     getCustomerWarranties().catch(() => []),
@@ -54,25 +66,25 @@ export default async function AccountPage({ searchParams }: Props) {
     getCustomerInstallmentApplications().catch(() => []),
     getCustomerTradeInRequests().catch(() => []),
     getCustomerCareSubscriptions().catch(() => []),
-    getCustomerRepairs().catch(() => []),
   ]);
 
-  // Tab links
+  // Tab links with descriptive metadata for vertical tile formatting
   const tabs = [
-    { id: "orders", label: "Orders", count: orders.length },
-    { id: "repairs", label: "Repairs", count: repairs.length },
-    { id: "installments", label: "Installment Plans", count: installments.length },
-    { id: "care", label: "ScrinHouse Care", count: careSubs.length },
-    { id: "wishlist", label: "Wishlist", count: wishlistProducts.length },
-    { id: "wallet", label: "Referrals & Wallet", count: 0 },
-    { id: "addresses", label: "Addresses", count: addresses.length },
-    { id: "warranties", label: "Warranties", count: warranties.length },
+    { id: "orders", label: "Orders", description: "View order history & tracking", count: orders.length },
+    { id: "repairs", label: "Repairs", description: "Diagnostics & repair requests", count: repairs.length },
+    { id: "installments", label: "Installment Plans", description: "Hire-purchase agreements & balance", count: installments.length },
+    { id: "care", label: "ScrinHouse Care", description: "Active device protection", count: careSubs.length },
+    { id: "tradeins", label: "Trade-Ins", description: "Device valuations & status", count: tradeins.length },
+    { id: "wishlist", label: "Wishlist", description: "Saved favorite items", count: wishlistProducts.length },
+    { id: "wallet", label: "Referrals & Wallet", description: "Store credits & earnings", count: 0 },
+    { id: "addresses", label: "Addresses", description: "Saved delivery destinations", count: addresses.length },
+    { id: "warranties", label: "Warranties", description: "Device IMEI & warranty status", count: warranties.length },
   ];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {welcome === "1" && (
-        <div className="mb-6 rounded border border-border bg-muted px-4 py-3 text-sm text-foreground">
+        <div className="mb-6 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground">
           Welcome to ScrinHouse! Your account is ready.
         </div>
       )}
@@ -80,24 +92,50 @@ export default async function AccountPage({ searchParams }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border pb-5">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">My Account</h1>
-          <p className="text-xs text-muted-foreground mt-1">Manage your orders, wishlist, addresses and device warranties.</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl">My Account</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Manage your orders, repairs, installment plans, warranties, and profile settings.
+          </p>
         </div>
         <form action={signOut}>
           <button
             type="submit"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
+            className="text-sm font-semibold text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
           >
             Sign out
           </button>
         </form>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-12">
-        {/* ── Left Sidebar (col-span-3): Navigation & Profile info ── */}
+      {/* ── Primary Overview: Vertical Tiles Format (Orders, Repairs & More) ── */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Account Sections
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            Tap a tile to view details
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {tabs.map((t) => (
+            <AccountTileCard
+              key={t.id}
+              id={t.id}
+              label={t.label}
+              description={t.description}
+              count={t.count}
+              active={tab === t.id}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-12">
+        {/* ── Left Sidebar (col-span-3): Vertical Navigation & Profile info ── */}
         <aside className="md:col-span-3 space-y-6">
-          {/* Tabs Menu */}
-          <nav className="flex flex-row md:flex-col gap-1 border-b md:border-b-0 md:border-r border-border pb-4 md:pb-0 md:pr-4 overflow-x-auto">
+          {/* Vertical Menu Stack — No horizontal slides */}
+          <nav className="flex flex-col gap-1 border-r border-border pr-3">
             {tabs.map((t) => (
               <AccountTabLink
                 key={t.id}
@@ -110,7 +148,7 @@ export default async function AccountPage({ searchParams }: Props) {
           </nav>
 
           {/* Profile Card */}
-          <section className="border border-border p-5 space-y-3 bg-background">
+          <section className="rounded-xl border border-border p-5 space-y-3 bg-card shadow-sm">
             <div className="flex items-center gap-2 border-b border-border pb-3">
               <User className="size-4 text-muted-foreground" />
               <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">My Profile</h2>
@@ -118,19 +156,19 @@ export default async function AccountPage({ searchParams }: Props) {
             <dl className="space-y-2 text-xs">
               <div>
                 <dt className="text-muted-foreground">Full Name</dt>
-                <dd className="text-foreground font-medium mt-0.5">{profile?.full_name ?? "—"}</dd>
+                <dd className="text-foreground font-semibold mt-0.5">{profile?.full_name ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Email</dt>
-                <dd className="text-foreground font-medium mt-0.5 truncate">{user.email}</dd>
+                <dd className="text-foreground font-semibold mt-0.5 truncate">{user.email}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Phone</dt>
-                <dd className="text-foreground font-medium mt-0.5">{profile?.phone ?? "—"}</dd>
+                <dd className="text-foreground font-semibold mt-0.5">{profile?.phone ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Member Since</dt>
-                <dd className="text-foreground font-medium mt-0.5">
+                <dd className="text-foreground font-semibold mt-0.5">
                   {profile?.created_at ? formatDate(profile.created_at) : "—"}
                 </dd>
               </div>
@@ -144,17 +182,20 @@ export default async function AccountPage({ searchParams }: Props) {
           {/* TAB: ORDERS */}
           {tab === "orders" && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-foreground">Order History</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-foreground">Order History</h2>
+                <span className="text-xs text-muted-foreground">{orders.length} total</span>
+              </div>
               {orders.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border">
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border rounded-xl bg-card">
                   <Package className="size-9 text-muted-foreground/30" strokeWidth={1} />
                   <p className="text-sm text-muted-foreground">You haven&apos;t placed any orders yet.</p>
-                  <Button size="sm" className="mt-1 rounded-none" render={<Link href="/category/phones" />}>
+                  <Button size="sm" className="mt-1 rounded-xl" render={<Link href="/category/phones" />}>
                     Shop now
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-border border border-border">
+                <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden shadow-sm">
                   {orders.map((order) => (
                     <Link
                       key={order.id}
@@ -169,7 +210,7 @@ export default async function AccountPage({ searchParams }: Props) {
                       </div>
                       <div className="text-right space-y-1">
                         <p className="font-semibold text-foreground">{formatPrice(order.total)}</p>
-                        <p className={`text-xs font-medium capitalize rounded-full px-2 py-0.5 inline-block ${
+                        <p className={`text-xs font-semibold capitalize rounded-full px-2.5 py-0.5 inline-block ${
                           order.status === "paid" || order.status === "delivered"
                             ? "bg-green-500/10 text-green-700"
                             : order.status === "cancelled"
@@ -189,55 +230,67 @@ export default async function AccountPage({ searchParams }: Props) {
           {/* TAB: REPAIRS */}
           {tab === "repairs" && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-foreground">My Repairs</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-foreground">Repair Bookings</h2>
+                <Button size="sm" className="rounded-xl text-xs font-semibold" render={<Link href="/repairs/book" />}>
+                  Book a Repair
+                </Button>
+              </div>
               {repairs.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border">
+                <div className="flex flex-col items-center gap-3 py-16 text-center border border-border rounded-xl bg-card">
                   <Wrench className="size-9 text-muted-foreground/30" strokeWidth={1} />
                   <p className="text-sm text-muted-foreground">You don&apos;t have any repair bookings yet.</p>
-                  <Button size="sm" className="mt-1 rounded-none" render={<Link href="/repairs/book" />}>
-                    Book a repair
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Need screen replacement, battery fix, or diagnostics? Book certified technician repairs with pickup.
+                  </p>
+                  <Button size="sm" className="mt-2 rounded-xl" render={<Link href="/repairs/book" />}>
+                    Book Phone Repair
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {repairs.map((repair) => (
-                    <div key={repair.id} className="border border-border bg-background p-5 space-y-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="font-semibold text-foreground">{repair.deviceModel}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{repair.serviceType} · {formatDate(repair.createdAt)}</p>
+                <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden shadow-sm">
+                  {repairs.map((repair: any) => (
+                    <div
+                      key={repair.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 py-4 text-sm hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-foreground">
+                            Repair #{repair.id.slice(0, 8).toUpperCase()}
+                          </p>
+                          <span className={`text-[11px] font-semibold capitalize rounded-full px-2 py-0.5 ${
+                            repair.status === "completed"
+                              ? "bg-green-500/10 text-green-700"
+                              : repair.status === "in_repair" || repair.status === "diagnosed"
+                              ? "bg-blue-500/10 text-blue-700"
+                              : repair.status === "cancelled"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-yellow-500/10 text-yellow-700"
+                          }`}>
+                            {repair.status.replace(/_/g, " ")}
+                          </span>
                         </div>
-                        <span className={`inline-flex w-fit rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                          repair.status === "completed" || repair.status === "delivered"
-                            ? "bg-green-500/10 text-green-700"
-                            : repair.status === "cancelled"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-yellow-500/10 text-yellow-700"
-                        }`}>
-                          {repair.status.replace(/_/g, " ")}
-                        </span>
+                        <p className="text-xs font-medium text-foreground">
+                          {repair.device_model} &middot; <span className="text-muted-foreground">{repair.service_type}</span>
+                        </p>
+                        {repair.issue_description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {repair.issue_description}
+                          </p>
+                        )}
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="size-3" />
+                          {formatDate(repair.created_at)} &middot; {repair.delivery_method === "pickup_delivery" ? "Doorstep Pickup" : "Walk-in"}
+                        </p>
                       </div>
-                      <div className="grid gap-3 text-xs sm:grid-cols-2">
-                        <div>
-                          <p className="text-muted-foreground">Issue</p>
-                          <p className="mt-1 whitespace-pre-line text-foreground">{repair.issueDescription}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Estimated amount</p>
-                          <p className="mt-1 font-semibold text-foreground">{formatPrice(repair.estimatedAmount)}</p>
-                          <p className="mt-2 text-muted-foreground capitalize">{repair.deliveryMethod.replace(/_/g, " ")}</p>
-                          {repair.pickupAddress && (
-                            <p className="mt-1 text-foreground">
-                              {repair.pickupAddress.city}, {repair.pickupAddress.region}
-                              {repair.pickupAddress.landmark ? ` · ${repair.pickupAddress.landmark}` : ""}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-border pt-3">
-                        <p className="font-mono text-[10px] text-muted-foreground">#{repair.id.slice(0, 8).toUpperCase()}</p>
-                        <Link href={`/track?q=${repair.id}`} className="text-xs font-semibold underline underline-offset-4">
-                          Track repair
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
+                        <p className="font-bold text-foreground">{formatPrice(repair.estimated_amount)}</p>
+                        <Link
+                          href={`/track?ref=${repair.id}`}
+                          className="inline-flex items-center text-xs font-semibold text-foreground underline underline-offset-4 hover:text-foreground/80"
+                        >
+                          Track Status &rarr;
                         </Link>
                       </div>
                     </div>

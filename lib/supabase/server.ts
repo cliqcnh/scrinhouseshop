@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { getServerEnv } from "@/lib/env";
 import type { Database } from "@/types/database";
@@ -10,21 +10,30 @@ import type { Database } from "@/types/database";
  */
 export async function createClient() {
   const env = getServerEnv();
-  const cookieStore = await cookies();
+  const [cookieStore, headerList] = await Promise.all([
+    cookies(),
+    headers().catch(() => null),
+  ]);
+
+  const host = headerList?.get("x-forwarded-host") || headerList?.get("host");
+  const isScrinhouse = host?.endsWith("scrinhouse.com");
+  const cookieDomain = isScrinhouse ? ".scrinhouse.com" : undefined;
 
   return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: cookieDomain ? { domain: cookieDomain } : undefined,
       cookies: {
         getAll() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              const opts = cookieDomain ? { ...options, domain: cookieDomain } : options;
+              cookieStore.set(name, value, opts);
+            });
           } catch {
             // Called from a Server Component — safe to ignore because
             // middleware refreshes the session on every request.

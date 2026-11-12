@@ -7,16 +7,29 @@ import { LoginForm } from "./login-form";
 export const metadata: Metadata = { title: "Sign in" };
 
 interface Props {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; reason?: string }>;
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { next } = await searchParams;
+  const { next, error, reason } = await searchParams;
 
   // Already signed in — bounce them away
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user) redirect(next ?? "/account");
+
+  let initialError: string | null = null;
+  if (error) {
+    if (reason) {
+      initialError = `Google sign in failed: ${reason}`;
+    } else if (error === "oauth_failed") {
+      initialError = "Google authentication failed. Please try again.";
+    } else if (error === "no_code") {
+      initialError = "Authentication returned no authorization code. Please try again.";
+    } else {
+      initialError = `Sign in error: ${error}`;
+    }
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-68px)] items-center justify-center px-4 py-16">
@@ -37,7 +50,7 @@ export default async function LoginPage({ searchParams }: Props) {
           </p>
         </div>
 
-        <LoginForm next={next} />
+        <LoginForm next={next} initialError={initialError} />
       </div>
     </div>
   );

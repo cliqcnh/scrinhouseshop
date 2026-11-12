@@ -75,13 +75,12 @@ export async function signOut(): Promise<void> {
 
 export async function signInWithGoogle(next?: string): Promise<{ error: string | null; url?: string }> {
   const headerList = await headers();
-  const host = headerList.get("x-forwarded-host") || headerList.get("host");
+  const host = headerList.get("host");
   const proto = headerList.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  const isLocalhost = host?.startsWith("localhost") || host?.startsWith("127.0.0.1");
+  const isLocalhost = host?.startsWith("localhost") || host?.includes("127.0.0.1");
   const currentOrigin = isLocalhost
     ? `${proto}://${host}`
-    : configuredOrigin || "https://scrinhouse.com";
+    : (process.env.NEXT_PUBLIC_APP_URL || (host?.endsWith("scrinhouse.com") ? `${proto}://${host}` : "https://scrinhouse.com")).replace(/\/$/, "");
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {

@@ -8,113 +8,142 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const stateParam = searchParams.get("state");
 
+  // Determine landing page destination from OAuth state payload or query parameter
   let next = "/account";
-  let hasStateDestination = false;
   if (stateParam) {
     try {
       const parsed = JSON.parse(decodeURIComponent(stateParam));
-      const rawNext = parsed.next;
-      if (typeof rawNext === "string" && rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes(":")) {
-        next = rawNext;
-        hasStateDestination = true;
+      if (parsed.next) {
+        const rawNext = parsed.next;
+        if (rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes(":")) {
+          next = rawNext;
+        }
       }
     } catch {
-      // Ignore invalid OAuth state and use the safe default.
+      // Ignore parse issues
     }
-  }
-
-  if (!hasStateDestination) {
+  } else {
     const rawNext = searchParams.get("next") ?? "/account";
     if (rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes(":")) {
       next = rawNext;
     }
   }
 
+  // Handle proxy headers (Vercel) to preserve the public user-facing domain
   const forwardedHost = request.headers.get("x-forwarded-host");
   const host = forwardedHost || request.headers.get("host");
   const proto = request.headers.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
-  const currentOrigin = host ? `${proto}://${host}` : origin;
-  const cookieStore = await cookies();
-  const cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+  let currentOrigin = host ? `${proto}://${host}` : origin;
 
+  // Enforce scrinhouse.com in production so the user is never kept on vercel.app
+  const isLocalhost = host?.startsWith("localhost") || host?.includes("127.0.0.1") || origin.includes("localhost");
+  if (!isLocalhost && (currentOrigin.includes("vercel.app") || !currentOrigin.includes("scrinhouse.com"))) {
+    currentOrigin = (process.env.NEXT_PUBLIC_APP_URL || "https://scrinhouse.com").replace(/\/$/, "");
+  }
+
+  // Next.js 15 cookies store and custom response cookie tracking
+  const cookieStore = await cookies();
+  const cookiesToSet: Array<{ name: string; value: string; options: any }> = [];
+
+  const isScrinhouse = host?.endsWith("scrinhouse.com");
+  const cookieDomain = isScrinhouse ? ".scrinhouse.com" : undefined;
+
+  const env = getServerEnv();
   const supabase = createServerClient(
-    getServerEnv().NEXT_PUBLIC_SUPABASE_URL,
-    getServerEnv().NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: cookieDomain ? { domain: cookieDomain } : undefined,
       cookies: {
-        getAll: () => cookieStore.getAll(),
+        getAll() {
+          return cookieStore.getAll();
+        },
         setAll(cookiesList) {
-          cookiesList.forEach(({ name, value, options }) => {
+          cookiesList.forEach((c) => {
+            const opts = cookieDomain ? { ...c.options, domain: cookieDomain } : c.options;
             try {
-              cookieStore.set(name, value, options);
+              cookieStore.set(c.name, c.value, opts);
             } catch {
-              // Route handlers may not allow direct cookie mutation in every context.
+              // Ignore in read-only server context
             }
-            cookiesToSet.push({ name, value, options });
+            cookiesToSet.push({ name: c.name, value: c.value, options: opts });
           });
         },
       },
-    },
+    }
   );
 
-  function redirectWithCookies(targetUrl: string) {
+  // Helper: ensures all Set-Cookie headers are attached directly to the redirect response
+  function createRedirectResponse(targetUrl: string) {
     const response = NextResponse.redirect(targetUrl);
-    cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options);
+    });
     return response;
   }
 
-  if (!code) {
-    return redirectWithCookies(`${currentOrigin}/auth/login?error=oauth_failed`);
+  if (code) {
+    try {
+      // 1. Try standard Supabase PKCE code exchange (used by supabase.auth.signInWithOAuth)
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+      // 2. If PKCE exchange fails, fallback to direct Google OAuth token exchange (used by custom signInWithGoogle)
+      if (exchangeError) {
+        console.warn("Supabase exchangeCodeForSession failed:", exchangeError.message, "trying direct Google token exchange...");
+
+        const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            code,
+            client_id: process.env.GOOGLE_CLIENT_ID || "",
+            client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
+            redirect_uri: `${currentOrigin}/auth/callback`,
+            grant_type: "authorization_code",
+          }),
+        });
+
+        const tokens = await tokenResponse.json();
+        if (tokens.error || !tokens.id_token) {
+          console.error("OAuth code exchange failed: Supabase error:", exchangeError.message, "Google token error:", tokens.error, tokens.error_description);
+          return createRedirectResponse(`${currentOrigin}/auth/login?error=oauth_failed&reason=${encodeURIComponent(exchangeError.message)}`);
+        }
+
+        // Log in to Supabase with Google ID Token
+        const { error: authError } = await supabase.auth.signInWithIdToken({
+          provider: "google",
+          token: tokens.id_token,
+        });
+
+        if (authError) {
+          console.error("Supabase signInWithIdToken failed:", authError.message);
+          return createRedirectResponse(`${currentOrigin}/auth/login?error=oauth_failed&reason=${encodeURIComponent(authError.message)}`);
+        }
+      }
+
+      // Check if user has phone number configured in their profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile?.phone) {
+          return createRedirectResponse(
+            `${currentOrigin}/auth/phone?next=${encodeURIComponent(next)}`
+          );
+        }
+      }
+
+      return createRedirectResponse(`${currentOrigin}${next}`);
+    } catch (err) {
+      console.error("Error in Google OAuth callback handler:", err);
+      const errMsg = err instanceof Error ? err.message : "unknown_error";
+      return createRedirectResponse(`${currentOrigin}/auth/login?error=oauth_failed&reason=${encodeURIComponent(errMsg)}`);
+    }
   }
 
-  try {
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (exchangeError) {
-      console.warn("Supabase OAuth code exchange failed:", exchangeError.message);
-
-      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          code,
-          client_id: process.env.GOOGLE_CLIENT_ID || "",
-          client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-          redirect_uri: `${currentOrigin}/auth/callback`,
-          grant_type: "authorization_code",
-        }),
-      });
-      const tokens = await tokenResponse.json();
-
-      if (tokens.error || !tokens.id_token) {
-        return redirectWithCookies(`${currentOrigin}/auth/login?error=oauth_failed`);
-      }
-
-      const { error: authError } = await supabase.auth.signInWithIdToken({
-        provider: "google",
-        token: tokens.id_token,
-      });
-      if (authError) {
-        return redirectWithCookies(`${currentOrigin}/auth/login?error=oauth_failed`);
-      }
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("phone")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile?.phone) {
-        return redirectWithCookies(`${currentOrigin}/auth/phone?next=${encodeURIComponent(next)}`);
-      }
-    }
-
-    return redirectWithCookies(`${currentOrigin}${next}`);
-  } catch (error) {
-    console.error("Error in Google OAuth callback:", error);
-    return redirectWithCookies(`${currentOrigin}/auth/login?error=oauth_failed`);
-  }
+  return createRedirectResponse(`${currentOrigin}/auth/login?error=no_code`);
 }

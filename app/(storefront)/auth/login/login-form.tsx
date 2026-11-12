@@ -11,15 +11,16 @@ import { signInWithGoogle } from "@/actions/auth/customer";
 
 interface Props {
   next?: string;
+  initialError?: string | null;
 }
 
-export function LoginForm({ next }: Props) {
+export function LoginForm({ next, initialError }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(initialError ?? null);
 
   const destination = (next && next.startsWith("/") && !next.startsWith("//") && !next.includes(":"))
     ? next
@@ -60,9 +61,28 @@ export function LoginForm({ next }: Props) {
     try {
       setErrorMsg(null);
       setGoogleLoading(true);
-      const res = await signInWithGoogle(destination);
-      if (res?.error) {
-        setErrorMsg(res.error);
+      const supabase = createClient();
+
+      // Ensure callback always stays on scrinhouse.com in production rather than vercel.app
+      const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      const appOrigin = isLocalhost
+        ? window.location.origin
+        : (process.env.NEXT_PUBLIC_APP_URL || (window.location.hostname.endsWith("scrinhouse.com") ? window.location.origin : "https://scrinhouse.com")).replace(/\/$/, "");
+
+      const callbackUrl = `${appOrigin}/auth/callback?next=${encodeURIComponent(destination)}`;
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl,
+        },
+      });
+
+      if (oauthError) {
+        // Fallback to custom Google OAuth flow
+        const res = await signInWithGoogle(destination);
+        if (res?.error) {
+          setErrorMsg(res.error);
+        }
       }
     } catch (err: unknown) {
       if (err && typeof err === "object" && ("digest" in err || "message" in err)) {
