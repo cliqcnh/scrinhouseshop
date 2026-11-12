@@ -20,6 +20,21 @@ export async function getCustomerOrders(): Promise<OrderRow[]> {
   return data ?? [];
 }
 
+export async function getCustomerRepairs() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("repair_bookings")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data;
+}
+
 export async function getCustomerWarranties() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

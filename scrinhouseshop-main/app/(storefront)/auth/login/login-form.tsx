@@ -63,8 +63,13 @@ export function LoginForm({ next, initialError }: Props) {
       setGoogleLoading(true);
       const supabase = createClient();
 
-      // 1. Try native Supabase OAuth first
-      const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+      // Ensure callback always stays on scrinhouse.com in production rather than vercel.app
+      const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      const appOrigin = isLocalhost
+        ? window.location.origin
+        : (process.env.NEXT_PUBLIC_APP_URL || (window.location.hostname.endsWith("scrinhouse.com") ? window.location.origin : "https://scrinhouse.com")).replace(/\/$/, "");
+
+      const callbackUrl = `${appOrigin}/auth/callback?next=${encodeURIComponent(destination)}`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

@@ -77,7 +77,10 @@ export async function signInWithGoogle(next?: string): Promise<{ error: string |
   const headerList = await headers();
   const host = headerList.get("host");
   const proto = headerList.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
-  const currentOrigin = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+  const isLocalhost = host?.startsWith("localhost") || host?.includes("127.0.0.1");
+  const currentOrigin = isLocalhost
+    ? `${proto}://${host}`
+    : (process.env.NEXT_PUBLIC_APP_URL || (host?.endsWith("scrinhouse.com") ? `${proto}://${host}` : "https://scrinhouse.com")).replace(/\/$/, "");
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) {
