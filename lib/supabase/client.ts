@@ -27,6 +27,7 @@ export function createClient() {
             domain: ".scrinhouse.com",
             path: "/",
             sameSite: "lax",
+            secure: typeof window !== "undefined" && window.location.protocol === "https:",
           },
         }
       : undefined

@@ -33,13 +33,7 @@ export async function GET(request: NextRequest) {
   const forwardedHost = request.headers.get("x-forwarded-host");
   const host = forwardedHost || request.headers.get("host");
   const proto = request.headers.get("x-forwarded-proto") || (host?.startsWith("localhost") ? "http" : "https");
-  let currentOrigin = host ? `${proto}://${host}` : origin;
-
-  // Enforce scrinhouse.com in production so the user is never kept on vercel.app
-  const isLocalhost = host?.startsWith("localhost") || host?.includes("127.0.0.1") || origin.includes("localhost");
-  if (!isLocalhost && (currentOrigin.includes("vercel.app") || !currentOrigin.includes("scrinhouse.com"))) {
-    currentOrigin = (process.env.NEXT_PUBLIC_APP_URL || "https://scrinhouse.com").replace(/\/$/, "");
-  }
+  const currentOrigin = host ? `${proto}://${host}` : origin;
 
   // Next.js 15 cookies store and custom response cookie tracking
   const cookieStore = await cookies();

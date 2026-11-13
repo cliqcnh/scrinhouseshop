@@ -4,6 +4,7 @@ import NextTopLoader from "nextjs-toploader";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthHashHandler } from "@/components/layout/auth-hash-handler";
 import "./globals.css";
 
 const display = localFont({
@@ -81,6 +82,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider delay={150}>
+            <AuthHashHandler />
             {children}
             <Toaster position="top-center" />
           </TooltipProvider>
