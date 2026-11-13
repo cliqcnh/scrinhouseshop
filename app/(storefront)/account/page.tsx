@@ -22,7 +22,7 @@ import { getWalletDetails } from "@/actions/storefront/wallet";
 import { WalletClient } from "@/components/account/wallet-client";
 import { CustomerTradeInList } from "@/components/account/trade-in-list-client";
 import { CustomerCareList } from "@/components/account/care-list-client";
-import { AccountTabLink, AccountTabWrapper, AccountTileCard } from "@/components/account/account-tab-wrapper";
+import { AccountTabWrapper, AccountTileCard } from "@/components/account/account-tab-wrapper";
 
 export const metadata: Metadata = { title: "My Account" };
 
@@ -89,25 +89,56 @@ export default async function AccountPage({ searchParams }: Props) {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border pb-5">
-        <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl">My Account</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Manage your orders, repairs, installment plans, warranties, and profile settings.
-          </p>
+      {/* Header & Customer Profile */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-foreground text-background font-bold text-xl uppercase shadow-sm">
+            {profile?.full_name ? (
+              profile.full_name.charAt(0)
+            ) : (
+              <User className="size-6 text-background" />
+            )}
+          </div>
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
+                {profile?.full_name || "My Account"}
+              </h1>
+              <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
+                Customer
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="truncate font-medium">{user.email}</span>
+              {profile?.phone && (
+                <>
+                  <span className="hidden sm:inline">&middot;</span>
+                  <span>{profile.phone}</span>
+                </>
+              )}
+              {profile?.created_at && (
+                <>
+                  <span className="hidden sm:inline">&middot;</span>
+                  <span>Joined {formatDate(profile.created_at)}</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-        <form action={signOut}>
-          <button
+
+        <form action={signOut} className="shrink-0">
+          <Button
             type="submit"
-            className="text-sm font-semibold text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
+            variant="outline"
+            size="sm"
+            className="rounded-xl text-xs font-semibold hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
           >
             Sign out
-          </button>
+          </Button>
         </form>
       </div>
 
-      {/* ── Primary Overview: Vertical Tiles Format (Orders, Repairs & More) ── */}
+      {/* ── Primary Navigation: Account Tiles (Boxes Format) ── */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -117,7 +148,7 @@ export default async function AccountPage({ searchParams }: Props) {
             Tap a tile to view details
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {tabs.map((t) => (
             <AccountTileCard
               key={t.id}
@@ -131,54 +162,9 @@ export default async function AccountPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-12">
-        {/* ── Left Sidebar (col-span-3): Vertical Navigation & Profile info ── */}
-        <aside className="md:col-span-3 space-y-6">
-          {/* Vertical Menu Stack — No horizontal slides */}
-          <nav className="flex flex-col gap-1 border-r border-border pr-3">
-            {tabs.map((t) => (
-              <AccountTabLink
-                key={t.id}
-                id={t.id}
-                label={t.label}
-                count={t.count}
-                active={tab === t.id}
-              />
-            ))}
-          </nav>
-
-          {/* Profile Card */}
-          <section className="rounded-xl border border-border p-5 space-y-3 bg-card shadow-sm">
-            <div className="flex items-center gap-2 border-b border-border pb-3">
-              <User className="size-4 text-muted-foreground" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">My Profile</h2>
-            </div>
-            <dl className="space-y-2 text-xs">
-              <div>
-                <dt className="text-muted-foreground">Full Name</dt>
-                <dd className="text-foreground font-semibold mt-0.5">{profile?.full_name ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Email</dt>
-                <dd className="text-foreground font-semibold mt-0.5 truncate">{user.email}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Phone</dt>
-                <dd className="text-foreground font-semibold mt-0.5">{profile?.phone ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Member Since</dt>
-                <dd className="text-foreground font-semibold mt-0.5">
-                  {profile?.created_at ? formatDate(profile.created_at) : "—"}
-                </dd>
-              </div>
-            </dl>
-          </section>
-        </aside>
-
-        {/* ── Right Content Area (col-span-9) ── */}
-        <main className="md:col-span-9">
-          <AccountTabWrapper activeTab={tab}>
+      {/* ── Active Section Details (Full Width) ── */}
+      <main className="mt-10">
+        <AccountTabWrapper activeTab={tab}>
           {/* TAB: ORDERS */}
           {tab === "orders" && (
             <div className="space-y-4">
@@ -496,7 +482,6 @@ export default async function AccountPage({ searchParams }: Props) {
           )}
           </AccountTabWrapper>
         </main>
-      </div>
     </div>
   );
 }
