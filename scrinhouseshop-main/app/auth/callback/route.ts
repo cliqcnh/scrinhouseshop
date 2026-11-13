@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   // Next.js 15 cookies store and custom response cookie tracking
   const cookieStore = await cookies();
-  const cookiesToSet: Array<{ name: string; value: string; options: any }> = [];
+  const cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }> = [];
 
   const isScrinhouse = host?.endsWith("scrinhouse.com");
   const cookieDomain = isScrinhouse ? ".scrinhouse.com" : undefined;
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
   function createRedirectResponse(targetUrl: string) {
     const response = NextResponse.redirect(targetUrl);
     cookiesToSet.forEach(({ name, value, options }) => {
-      response.cookies.set(name, value, options);
+      response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2]);
     });
     return response;
   }

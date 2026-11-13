@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, Heart, CreditCard, ShieldCheck, User, Wrench, RefreshCw, Clock } from "lucide-react";
+import { Package, Heart, CreditCard, ShieldCheck, User, Wrench, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/actions/auth/customer";
@@ -249,7 +249,7 @@ export default async function AccountPage({ searchParams }: Props) {
                 </div>
               ) : (
                 <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden shadow-sm">
-                  {repairs.map((repair: any) => (
+                  {repairs.map((repair) => (
                     <div
                       key={repair.id}
                       className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 py-4 text-sm hover:bg-muted/30 transition-colors"

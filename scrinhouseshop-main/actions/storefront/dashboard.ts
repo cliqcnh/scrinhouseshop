@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
 type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
+type RepairBookingRow = Database["public"]["Tables"]["repair_bookings"]["Row"];
 
 export async function getCustomerOrders(): Promise<OrderRow[]> {
   const supabase = await createClient();
@@ -20,7 +21,7 @@ export async function getCustomerOrders(): Promise<OrderRow[]> {
   return data ?? [];
 }
 
-export async function getCustomerRepairs() {
+export async function getCustomerRepairs(): Promise<RepairBookingRow[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
