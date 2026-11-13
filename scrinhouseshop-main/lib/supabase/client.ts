@@ -16,5 +16,9 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      flowType: "pkce",
+    },
+  });
 }
