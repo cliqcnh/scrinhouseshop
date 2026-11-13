@@ -21,7 +21,11 @@ export default async function LoginPage({ searchParams }: Props) {
   let initialError: string | null = null;
   if (error) {
     if (reason) {
-      initialError = `Google sign in failed: ${reason}`;
+      if (reason.includes("Unable to exchange external code")) {
+        initialError = "Google configuration issue: Supabase could not verify the code with Google. Please check your Google Client Secret in the Supabase Dashboard and verify that 'https://cixyxlgoihbuchootwkk.supabase.co/auth/v1/callback' is listed in Google Cloud's Authorized Redirect URIs.";
+      } else {
+        initialError = `Google sign in failed: ${reason}`;
+      }
     } else if (error === "oauth_failed") {
       initialError = "Google authentication failed. Please try again.";
     } else if (error === "no_code") {
