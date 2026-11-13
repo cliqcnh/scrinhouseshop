@@ -20,6 +20,7 @@ import {
 import { productFormSchema, type ProductFormValues } from "@/lib/validations/admin-product";
 import { saveProduct } from "@/actions/admin/products";
 import type { Category } from "@/types/catalog";
+import { cn } from "@/lib/utils";
 
 interface ProductFormProps {
   categories: Category[];
@@ -45,8 +46,17 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"basic" | "pricing" | "variants">("basic");
 
+  // Variant Attributes Configuration (e.g. Model for phone cases, Storage for phones)
+  const [primaryAttributeName, setPrimaryAttributeName] = useState<string>(() => {
+    if (initialValues?.variants?.some((v) => v.storage && !/gb|tb|mb/i.test(v.storage))) {
+      return "Model";
+    }
+    return initialValues?.productType === "accessory" ? "Model" : "Storage";
+  });
+  const [secondaryAttributeName, setSecondaryAttributeName] = useState<string>("Color");
+
   // Bulk Variant Generation state
-  const [bulkStorages, setBulkStorages] = useState("");
+  const [bulkPrimaryValues, setBulkPrimaryValues] = useState("");
   const [bulkColors, setBulkColors] = useState("");
 
   const {
@@ -113,12 +123,19 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
   useEffect(() => {
     if (!initialValues) {
       setValue("allowInstallments", productType === "phone");
+      if (productType === "accessory") {
+        setPrimaryAttributeName("Model");
+      } else if (productType === "phone") {
+        setPrimaryAttributeName("Storage");
+      } else if (productType === "repair_part") {
+        setPrimaryAttributeName("Device Model");
+      }
     }
   }, [productType, initialValues, setValue]);
 
   // Bulk Variant Matrix Generator
   function handleGenerateVariants() {
-    const storages = bulkStorages
+    const primaryOptions = bulkPrimaryValues
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
@@ -127,8 +144,8 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
       .map((c) => c.trim())
       .filter(Boolean);
 
-    if (storages.length === 0 && colors.length === 0) {
-      toast.error("Please enter at least one storage or color option to generate.");
+    if (primaryOptions.length === 0 && colors.length === 0) {
+      toast.error(`Please enter at least one ${primaryAttributeName || "option"} or ${secondaryAttributeName || "color"} to generate.`);
       return;
     }
 
@@ -136,18 +153,18 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
     const basePrice = basePriceValue || 0;
 
     const newVariants: typeof EMPTY_VARIANT[] = [];
-    const storageList = storages.length > 0 ? storages : [""];
+    const primaryList = primaryOptions.length > 0 ? primaryOptions : [""];
     const colorList = colors.length > 0 ? colors : [""];
 
-    for (const storage of storageList) {
+    for (const opt of primaryList) {
       for (const color of colorList) {
-        const suffixParts = [storage, color].filter(Boolean);
+        const suffixParts = [opt, color].filter(Boolean);
         const suffix = suffixParts.join("-").toUpperCase().replace(/[^A-Z0-9-]+/g, "");
         const variantSku = suffix ? `${baseSku}-${suffix}` : baseSku;
 
         newVariants.push({
           sku: variantSku,
-          storage: storage || "",
+          storage: opt || "",
           color: color || "",
           price: basePrice,
           stockQuantity: 10, // pre-fill with a default stock level
@@ -369,29 +386,97 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
       {activeTab === "variants" && (
         <div className="space-y-6">
           {/* Variant Matrix Generator Dashboard */}
-          <div className="rounded-none border border-border bg-[#fafafa] p-5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Bulk Variant Matrix Generator</h3>
-            <p className="text-xs text-muted-foreground mt-1 mb-4">
-              Type attributes separated by commas. The system will automatically build all matching product variants with pre-filled SKU codes and base prices.
-            </p>
+          <div className="rounded-none border border-border bg-[#fafafa] p-5 space-y-4">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Bulk Variant Matrix Generator
+                </h3>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  Customizable attributes for Phones, Cases, Parts & Accessories
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Generate variant combinations instantly (e.g. Model &times; Color for cases, or Storage &times; Color for phones).
+              </p>
+            </div>
+
+            {/* Attribute Configurator */}
+            <div className="border border-border/80 bg-white p-3.5 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Primary Attribute Name
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Choose <strong>Model</strong> (for phone cases/accessories), <strong>Storage</strong> (for phones), or type a custom attribute name:
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {["Model", "Storage", "Size", "Compatibility"].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setPrimaryAttributeName(preset)}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-semibold border transition-colors",
+                        primaryAttributeName.toLowerCase() === preset.toLowerCase()
+                          ? "bg-foreground text-background border-foreground shadow-sm"
+                          : "bg-muted/40 text-muted-foreground border-border hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                  <Input
+                    value={primaryAttributeName}
+                    onChange={(e) => setPrimaryAttributeName(e.target.value)}
+                    placeholder="Custom attribute"
+                    className="h-7 w-28 text-xs rounded-none border-border"
+                  />
+                </div>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="bulkStorages" className="text-xs font-bold text-muted-foreground">Storage Capacities (comma-separated)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bulkPrimary" className="text-xs font-bold text-foreground">
+                    {primaryAttributeName || "Model"} Options (comma-separated)
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">
+                    {primaryAttributeName.toLowerCase().includes("model")
+                      ? "e.g. phone models"
+                      : "primary attribute options"}
+                  </span>
+                </div>
                 <Input
-                  id="bulkStorages"
-                  placeholder="e.g. 128GB, 256GB, 512GB"
-                  value={bulkStorages}
-                  onChange={(e) => setBulkStorages(e.target.value)}
+                  id="bulkPrimary"
+                  placeholder={
+                    primaryAttributeName.toLowerCase().includes("model")
+                      ? "e.g. iPhone 15, iPhone 15 Pro, iPhone 15 Pro Max, iPhone 14, S24 Ultra"
+                      : primaryAttributeName.toLowerCase().includes("storage")
+                      ? "e.g. 128GB, 256GB, 512GB, 1TB"
+                      : primaryAttributeName.toLowerCase().includes("size")
+                      ? "e.g. Small, Medium, Large, XL"
+                      : "e.g. Option 1, Option 2, Option 3"
+                  }
+                  value={bulkPrimaryValues}
+                  onChange={(e) => setBulkPrimaryValues(e.target.value)}
                   className="rounded-none border-border bg-white"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="bulkColors" className="text-xs font-bold text-muted-foreground">Colors (comma-separated)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="bulkColors" className="text-xs font-bold text-foreground">
+                    {secondaryAttributeName || "Color"} Options (comma-separated)
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">optional secondary attribute</span>
+                </div>
                 <Input
                   id="bulkColors"
-                  placeholder="e.g. Black, Silver, Gold"
+                  placeholder="e.g. Black, Clear, Blue, Natural Titanium, Gold"
                   value={bulkColors}
                   onChange={(e) => setBulkColors(e.target.value)}
                   className="rounded-none border-border bg-white"
@@ -404,7 +489,7 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
               variant="outline"
               size="sm"
               onClick={handleGenerateVariants}
-              className="mt-4 rounded-none bg-white font-semibold"
+              className="rounded-none bg-white font-semibold hover:bg-foreground hover:text-background transition-colors"
             >
               Generate Variants Matrix
             </Button>
@@ -414,8 +499,12 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
           <section className="rounded-none border border-border bg-white p-5">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
               <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">Variants Checklist</h2>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Customize individual variant attributes below.</p>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Variants Checklist ({fields.length})
+                </h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Customize individual variant attributes, prices, and stock counts below.
+                </p>
               </div>
               <Button
                 type="button"
@@ -431,6 +520,16 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
               <p className="my-2 text-xs text-destructive">{errors.variants.root.message}</p>
             )}
 
+            {/* Desktop Table Headers */}
+            <div className="hidden sm:grid sm:grid-cols-6 gap-2.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30 border border-border mb-2">
+              <div className="sm:col-span-1">SKU</div>
+              <div className="sm:col-span-1">{primaryAttributeName || "Model / Storage"}</div>
+              <div className="sm:col-span-1">{secondaryAttributeName || "Color"}</div>
+              <div className="sm:col-span-1">Price (GH₵)</div>
+              <div className="sm:col-span-1">Stock Qty</div>
+              <div className="sm:col-span-1 text-right">Action</div>
+            </div>
+
             <div className="space-y-2.5">
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-2 gap-2.5 rounded-none border border-border p-3 sm:grid-cols-6 items-center">
@@ -439,12 +538,24 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
                     <Input placeholder="SKU" {...register(`variants.${index}.sku`)} className="rounded-none text-xs border-border h-9" />
                   </div>
                   <div className="space-y-1 sm:col-span-1">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground sm:hidden">Storage</Label>
-                    <Input placeholder="Storage" {...register(`variants.${index}.storage`)} className="rounded-none text-xs border-border h-9" />
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground sm:hidden">
+                      {primaryAttributeName || "Model"}
+                    </Label>
+                    <Input
+                      placeholder={primaryAttributeName || "Model / Storage"}
+                      {...register(`variants.${index}.storage`)}
+                      className="rounded-none text-xs border-border h-9"
+                    />
                   </div>
                   <div className="space-y-1 sm:col-span-1">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground sm:hidden">Color</Label>
-                    <Input placeholder="Color" {...register(`variants.${index}.color`)} className="rounded-none text-xs border-border h-9" />
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground sm:hidden">
+                      {secondaryAttributeName || "Color"}
+                    </Label>
+                    <Input
+                      placeholder={secondaryAttributeName || "Color"}
+                      {...register(`variants.${index}.color`)}
+                      className="rounded-none text-xs border-border h-9"
+                    />
                   </div>
                   <div className="space-y-1 sm:col-span-1">
                     <Label className="text-[10px] uppercase font-bold text-muted-foreground sm:hidden">Price</Label>

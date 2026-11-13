@@ -53,6 +53,17 @@ export function AddToCartPanel({
     [product.variants],
   );
 
+  const primaryAttributeLabel = useMemo(() => {
+    if (product.productType === "accessory" || product.productType === "repair_part") {
+      return "Model";
+    }
+    const isStorageLike = storages.every((s) => /gb|tb|mb/i.test(s));
+    if (!isStorageLike && storages.length > 0) {
+      return "Model";
+    }
+    return "Storage";
+  }, [product.productType, storages]);
+
   const [selectedStorage, setSelectedStorage] = useState<string | undefined>(storages[0]);
   const [selectedColor, setSelectedColor] = useState<string | undefined>(colors[0]);
   const [quantity, setQuantity] = useState(1);
@@ -220,7 +231,7 @@ export function AddToCartPanel({
       )}
       {storages.length > 0 && (
         <div>
-          <p className="text-sm font-medium text-foreground">Storage</p>
+          <p className="text-sm font-medium text-foreground">{primaryAttributeLabel}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {storages.map((storage) => (
               <button

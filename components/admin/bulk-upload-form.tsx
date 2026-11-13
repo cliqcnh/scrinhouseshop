@@ -26,6 +26,7 @@ export function BulkUploadForm({ categories, brands }: BulkUploadFormProps) {
     const csvContent = [
       "name,slug,description,categoryName,brandName,productType,condition,sku,basePrice,compareAtPrice,tags,isFeatured,isActive,variantsString,imageNames",
       `iPhone 13,iphone-13,Good as new flagship Apple device,Phones,Apple,phone,uk_used,IPH13-BASE,1200.00,1500.00,"apple,flagship",true,true,128GB/Black/IPH13-128-BLK/1200/10;256GB/Silver/IPH13-256-SLV/1450/5,iphone13_front.jpg,iphone13_back.jpg`,
+      `Magnetic Phone Case,magnetic-phone-case,Shockproof magnetic protective case,Accessories,Apple,accessory,,CASE-MAG,150.00,,"case,magnetic",false,true,iPhone 15 Pro/Clear/CASE-15P-CLR/150/20;iPhone 15/Black/CASE-15-BLK/150/15,case_front.jpg`,
       `USB-C Fast Charger,usb-c-fast-charger,20W Super Fast Power Adapter,Accessories,Samsung,accessory,,USBC-20W,150.00,,charger,false,true,,charger_adapter.png`
     ].join("\n");
 
