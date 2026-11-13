@@ -56,8 +56,7 @@ export function RegisterForm({ next }: Props) {
         return;
       }
 
-      router.replace(destination);
-      router.refresh();
+      window.location.href = destination;
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "An unexpected error occurred during registration.");
       setLoading(false);
@@ -71,7 +70,9 @@ export function RegisterForm({ next }: Props) {
       const supabase = createClient();
 
       const origin = typeof window !== "undefined" ? window.location.origin : "";
-      const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(destination)}`;
+      const callbackUrl = destination && destination !== "/account"
+        ? `${origin}/auth/callback?next=${encodeURIComponent(destination)}`
+        : `${origin}/auth/callback`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

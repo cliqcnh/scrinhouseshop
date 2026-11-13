@@ -16,20 +16,5 @@ export function createClient() {
     );
   }
 
-  const isScrinhouse = typeof window !== "undefined" && window.location.hostname.endsWith("scrinhouse.com");
-
-  return createBrowserClient<Database>(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
-    isScrinhouse
-      ? {
-          cookieOptions: {
-            domain: ".scrinhouse.com",
-            path: "/",
-            sameSite: "lax",
-            secure: typeof window !== "undefined" && window.location.protocol === "https:",
-          },
-        }
-      : undefined
-  );
+  return createBrowserClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
 }

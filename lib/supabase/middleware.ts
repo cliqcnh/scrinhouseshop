@@ -11,15 +11,10 @@ export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const env = getServerEnv();
 
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
-  const isScrinhouse = host?.endsWith("scrinhouse.com");
-  const cookieDomain = isScrinhouse ? ".scrinhouse.com" : undefined;
-
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
-      cookieOptions: cookieDomain ? { domain: cookieDomain } : undefined,
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -28,8 +23,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => {
-            const opts = cookieDomain ? { ...options, domain: cookieDomain } : options;
-            response.cookies.set(name, value, opts);
+            response.cookies.set(name, value, options);
           });
         },
       },

@@ -39,28 +39,23 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }> = [];
 
-  const isScrinhouse = host?.endsWith("scrinhouse.com");
-  const cookieDomain = isScrinhouse ? ".scrinhouse.com" : undefined;
-
   const env = getServerEnv();
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
-      cookieOptions: cookieDomain ? { domain: cookieDomain } : undefined,
       cookies: {
         getAll() {
           return cookieStore.getAll();
         },
         setAll(cookiesList) {
           cookiesList.forEach((c) => {
-            const opts = cookieDomain ? { ...c.options, domain: cookieDomain } : c.options;
             try {
-              cookieStore.set(c.name, c.value, opts);
+              cookieStore.set(c.name, c.value, c.options);
             } catch {
               // Ignore in read-only server context
             }
-            cookiesToSet.push({ name: c.name, value: c.value, options: opts });
+            cookiesToSet.push({ name: c.name, value: c.value, options: c.options });
           });
         },
       },
@@ -112,22 +107,6 @@ export async function GET(request: NextRequest) {
         if (authError) {
           console.error("Supabase signInWithIdToken failed:", authError.message);
           return createRedirectResponse(`${currentOrigin}/auth/login?error=oauth_failed&reason=${encodeURIComponent(authError.message)}`);
-        }
-      }
-
-      // Check if user has phone number configured in their profile
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("phone")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!profile?.phone) {
-          return createRedirectResponse(
-            `${currentOrigin}/auth/phone?next=${encodeURIComponent(next)}`
-          );
         }
       }
 

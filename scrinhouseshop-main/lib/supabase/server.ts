@@ -1,4 +1,4 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { getServerEnv } from "@/lib/env";
 import type { Database } from "@/types/database";
@@ -10,20 +10,12 @@ import type { Database } from "@/types/database";
  */
 export async function createClient() {
   const env = getServerEnv();
-  const [cookieStore, headerList] = await Promise.all([
-    cookies(),
-    headers().catch(() => null),
-  ]);
-
-  const host = headerList?.get("x-forwarded-host") || headerList?.get("host");
-  const isScrinhouse = host?.endsWith("scrinhouse.com");
-  const cookieDomain = isScrinhouse ? ".scrinhouse.com" : undefined;
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
-      cookieOptions: cookieDomain ? { domain: cookieDomain } : undefined,
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -31,8 +23,7 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              const opts = cookieDomain ? { ...options, domain: cookieDomain } : options;
-              cookieStore.set(name, value, opts);
+              cookieStore.set(name, value, options);
             });
           } catch {
             // Called from a Server Component — safe to ignore because

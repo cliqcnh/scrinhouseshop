@@ -1,37 +1,49 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /**
  * Handles OAuth implicit hash fragments (e.g. #access_token=... or #error=...)
- * when redirected to root or other client routes by Supabase.
+ * when redirected to root or other storefront routes by Supabase.
  */
 export function AuthHashHandler() {
-  const router = useRouter();
-
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash;
-    if (!hash) return;
-
-    if (hash.includes("access_token=") || hash.includes("refresh_token=")) {
-      const supabase = createClient();
-      supabase.auth.getSession().then(({ data: { session }, error }) => {
-        if (session && !error) {
-          // Clean the hash fragment from the URL bar without reloading
-          window.history.replaceState(null, "", window.location.pathname + window.location.search);
-          // If on root or auth pages, redirect to account dashboard
-          if (window.location.pathname === "/" || window.location.pathname.startsWith("/auth")) {
-            router.push("/account");
-            router.refresh();
-          }
-        }
-      });
+    if (!hash || (!hash.includes("access_token") && !hash.includes("refresh_token"))) {
+      return;
     }
-  }, [router]);
+
+    const supabase = createClient();
+
+    // Listen for auth state change triggered when Supabase parses the hash
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED")) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        if (window.location.pathname === "/" || window.location.pathname.startsWith("/auth")) {
+          window.location.href = "/account";
+        }
+      }
+    });
+
+    // Also directly verify session if already established
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        if (window.location.pathname === "/" || window.location.pathname.startsWith("/auth")) {
+          window.location.href = "/account";
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   return null;
 }
