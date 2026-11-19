@@ -21,6 +21,7 @@ import {
   Flame,
   Wallet,
   Shield,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,7 @@ const NAV_SECTIONS = [
     label: "Operations",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+      { href: "/admin/receipts", label: "Receipts", icon: Receipt },
       { href: "/admin/enquiries", label: "Enquiries", icon: MessageSquare },
       { href: "/admin/market-days", label: "Market Days", icon: Flame },
       { href: "/admin/installments", label: "Installments", icon: CreditCard },

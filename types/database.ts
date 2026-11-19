@@ -820,6 +820,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      receipts: {
+        Row: {
+          id: string;
+          receipt_number: string;
+          receipt_type: string;
+          customer_name: string;
+          customer_phone: string;
+          customer_email: string | null;
+          device_model: string | null;
+          imei_serial: string | null;
+          items: any;
+          subtotal: number;
+          discount: number;
+          tax: number;
+          total_amount: number;
+          amount_paid: number;
+          payment_method: string;
+          payment_status: string;
+          warranty_duration: string;
+          warranty_terms: string;
+          warranty_expiry_date: string | null;
+          notes: string | null;
+          issued_by: string | null;
+          issued_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["receipts"]["Row"]> & {
+          receipt_number: string;
+          customer_name: string;
+          customer_phone: string;
+          total_amount: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["receipts"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

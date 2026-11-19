@@ -28,6 +28,7 @@ import {
   BarChart3,
   Store,
   ShoppingCart,
+  Receipt,
 } from "lucide-react";
 import {
   Sheet,
@@ -56,6 +57,7 @@ const NAV_SECTIONS = [
     label: "Operations & Sales",
     items: [
       { href: "/admin/orders", label: "Orders Management", icon: ShoppingCart },
+      { href: "/admin/receipts", label: "Receipts & Invoices", icon: Receipt },
       { href: "/admin/market-days", label: "Market Days Deals", icon: Flame },
       { href: "/admin/coupons", label: "Discount Coupons", icon: Ticket },
       { href: "/admin/installments", label: "Installment Plans", icon: CreditCard },
