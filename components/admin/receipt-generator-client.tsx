@@ -185,7 +185,7 @@ export function ReceiptGeneratorClient() {
     ]);
   }
 
-  function updateItem(id: string, field: keyof FormItem, val: any) {
+  function updateItem<K extends keyof FormItem>(id: string, field: K, val: FormItem[K]) {
     setItems((prev) =>
       prev.map((it) => {
         if (it.id === id) {
@@ -548,7 +548,7 @@ export function ReceiptGeneratorClient() {
 
           {/* Line items list */}
           <div className="space-y-3">
-            {items.map((item, index) => (
+            {items.map((item) => (
               <div
                 key={item.id}
                 className="grid grid-cols-12 gap-2.5 rounded-lg border border-border bg-muted/10 p-3 items-center"
@@ -622,7 +622,7 @@ export function ReceiptGeneratorClient() {
           </div>
 
           {/* Subtotals & Discounts */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground">Discount (GH₵)</Label>
               <Input
@@ -631,6 +631,18 @@ export function ReceiptGeneratorClient() {
                 placeholder="0.00"
                 value={discount === 0 ? "" : discount}
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                className="h-8 text-xs font-mono rounded-lg border-border"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">Tax / VAT (GH₵)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="0.00"
+                value={tax === 0 ? "" : tax}
+                onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
                 className="h-8 text-xs font-mono rounded-lg border-border"
               />
             </div>
@@ -752,6 +764,19 @@ export function ReceiptGeneratorClient() {
                 className="h-9 text-xs font-mono rounded-lg border-border"
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5 pt-2">
+            <Label htmlFor="receiptNotes" className="text-xs font-semibold text-muted-foreground">
+              Internal Notes / Comments (Optional)
+            </Label>
+            <Input
+              id="receiptNotes"
+              placeholder="e.g. Paid in cash at shop, original packaging included"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="h-8 text-xs rounded-lg border-border"
+            />
           </div>
         </section>
 

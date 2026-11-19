@@ -53,7 +53,7 @@ export function ProductForm({ categories, brands, initialValues }: ProductFormPr
     }
     return initialValues?.productType === "accessory" ? "Model" : "Storage";
   });
-  const [secondaryAttributeName, setSecondaryAttributeName] = useState<string>("Color");
+  const [secondaryAttributeName] = useState<string>("Color");
 
   // Bulk Variant Generation state
   const [bulkPrimaryValues, setBulkPrimaryValues] = useState("");

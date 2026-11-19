@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import Link from "next/link";
-import { Printer, ShieldCheck, CheckCircle2, Share2, Copy, Check, ExternalLink, Wrench, Smartphone, Package } from "lucide-react";
+import { Printer, ShieldCheck, CheckCircle2, Share2, Copy, Check, ExternalLink, Wrench, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "@/lib/qrcode";

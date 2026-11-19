@@ -51,45 +51,51 @@ function calculateWarrantyExpiry(issueDate: Date, durationStr: string): string |
   return date.toISOString();
 }
 
-function mapRowToReceipt(row: any): Receipt {
-  const items: ReceiptItem[] = Array.isArray(row.items)
-    ? row.items.map((it: any, idx: number) => ({
-        id: it.id || `item-${idx}`,
-        itemType: it.itemType || "product",
-        description: it.description || "Item",
-        quantity: Number(it.quantity) || 1,
-        unitPrice: Number(it.unitPrice) || 0,
-        total: Number(it.total ?? (Number(it.quantity || 1) * Number(it.unitPrice || 0))),
-      }))
-    : [];
+function mapRowToReceipt(row: Record<string, unknown>): Receipt {
+  const rawItems = Array.isArray(row.items) ? row.items : [];
+  const items: ReceiptItem[] = rawItems.map((rawIt: unknown, idx: number) => {
+    const it = (typeof rawIt === "object" && rawIt !== null ? rawIt : {}) as Record<string, unknown>;
+    const qty = Number(it.quantity) || 1;
+    const unit = Number(it.unitPrice) || 0;
+    return {
+      id: String(it.id || `item-${idx}`),
+      itemType: (it.itemType as ReceiptItem["itemType"]) || "product",
+      description: String(it.description || "Item"),
+      quantity: qty,
+      unitPrice: unit,
+      total: Number(it.total ?? qty * unit),
+    };
+  });
 
   return {
-    id: row.id,
-    receiptNumber: row.receipt_number,
-    receiptType: row.receipt_type || "repair",
-    customerName: row.customer_name,
-    customerPhone: row.customer_phone,
-    customerEmail: row.customer_email || null,
-    deviceModel: row.device_model || null,
-    imeiSerial: row.imei_serial || null,
+    id: String(row.id),
+    receiptNumber: String(row.receipt_number),
+    receiptType: (row.receipt_type as Receipt["receiptType"]) || "repair",
+    customerName: String(row.customer_name || ""),
+    customerPhone: String(row.customer_phone || ""),
+    customerEmail: row.customer_email ? String(row.customer_email) : null,
+    deviceModel: row.device_model ? String(row.device_model) : null,
+    imeiSerial: row.imei_serial ? String(row.imei_serial) : null,
     items,
     subtotal: Number(row.subtotal) || 0,
     discount: Number(row.discount) || 0,
     tax: Number(row.tax) || 0,
     totalAmount: Number(row.total_amount) || 0,
     amountPaid: Number(row.amount_paid) || 0,
-    paymentMethod: row.payment_method || "cash",
-    paymentStatus: row.payment_status || "paid",
-    warrantyDuration: row.warranty_duration || "1 Week",
+    paymentMethod: (row.payment_method as Receipt["paymentMethod"]) || "cash",
+    paymentStatus: (row.payment_status as Receipt["paymentStatus"]) || "paid",
+    warrantyDuration: String(row.warranty_duration || "1 Week"),
     warrantyTerms:
-      row.warranty_terms ||
-      "All items and repairs have a 1-week non-damage warranty. Warranty covers manufacturer defects and workmanship only. Physical screen damage, cracks, water damage, or unauthorized tampering void the warranty.",
-    warrantyExpiryDate: row.warranty_expiry_date || null,
-    notes: row.notes || null,
-    issuedByName: row.issued_by_name || null,
-    issuedBy: row.issued_by || null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+      String(
+        row.warranty_terms ||
+          "All items and repairs have a 1-week non-damage warranty. Warranty covers manufacturer defects and workmanship only. Physical screen damage, cracks, water damage, or unauthorized tampering void the warranty."
+      ),
+    warrantyExpiryDate: row.warranty_expiry_date ? String(row.warranty_expiry_date) : null,
+    notes: row.notes ? String(row.notes) : null,
+    issuedByName: row.issued_by_name ? String(row.issued_by_name) : null,
+    issuedBy: row.issued_by ? String(row.issued_by) : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
   };
 }
 

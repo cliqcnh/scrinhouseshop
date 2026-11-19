@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { CheckCircle2, ShieldCheck, AlertCircle, Wrench, Smartphone, MessageCircle, Phone, ArrowLeft } from "lucide-react";
+import { CheckCircle2, ShieldCheck, AlertCircle, MessageCircle, Phone, ArrowLeft } from "lucide-react";
 import { getPublicReceiptVerification } from "@/actions/admin/receipts";
 import { ReceiptTemplate } from "@/components/admin/receipt-template";
 import { formatDate } from "@/utils/format";

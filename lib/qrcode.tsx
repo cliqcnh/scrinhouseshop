@@ -153,7 +153,6 @@ export function generateQRMatrix(text: string): boolean[][] {
   // 2. Interleave Error Correction Blocks
   const numBlocks = vInfo.blocks;
   const totalData = vInfo.dataCodewords;
-  const totalEc = vInfo.ecCodewords * numBlocks;
   const ecPerBlock = vInfo.ecCodewords;
 
   const dataBlocks: number[][] = [];
