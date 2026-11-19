@@ -38,16 +38,16 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: "ScrinHouse — Ghana's Trusted Phone Store & Repair Experts",
-    template: "%s | ScrinHouse",
+    default: "scrinhouse — Ghana's Trusted Phone Store & Repair Experts",
+    template: "%s | scrinhouse",
   },
   description:
     "Buy smartphones, accessories, and repair parts, or book a phone repair with doorstep pickup, in Ghana.",
   keywords: ["phone repair Ghana", "buy phones Ghana", "phone accessories", "screen replacement"],
   openGraph: {
     type: "website",
-    siteName: "ScrinHouse",
-    title: "ScrinHouse — Ghana's Trusted Phone Store & Repair Experts",
+    siteName: "scrinhouse",
+    title: "scrinhouse — Ghana's Trusted Phone Store & Repair Experts",
     description:
       "Buy smartphones, accessories, and repair parts, or book a phone repair with doorstep pickup, in Ghana.",
   },

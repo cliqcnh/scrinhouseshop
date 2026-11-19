@@ -3,7 +3,7 @@ import { AlertCircle, HelpCircle, ShieldAlert } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Returns Policy",
-  description: "Learn about our 7-day return policy and device warranty coverage at ScrinHouse GH.",
+  description: "Learn about our 7-day return policy and device warranty coverage at scrinhouse GH.",
 };
 
 export default function ReturnsPage() {
@@ -57,7 +57,7 @@ export default function ReturnsPage() {
                 <AlertCircle className="size-5 text-foreground shrink-0 mt-0.5" />
                 <div className="text-sm text-muted-foreground leading-relaxed">
                   <strong className="text-foreground">Step 1: Contact Support</strong><br />
-                  Email our support team at <span className="font-mono text-foreground font-semibold">returns@scrinhouse.com</span> or call us at <span className="font-mono text-foreground font-semibold">+233 50 123 4567</span>. State your Order ID and describe the hardware issue.
+                  Call our support team at <a href="tel:+233208204749" className="font-mono text-foreground font-semibold hover:underline">0208204749</a> / <a href="tel:+233247114256" className="font-mono text-foreground font-semibold hover:underline">0247114256</a> or reach us on WhatsApp at <a href="https://wa.me/233208204749" target="_blank" rel="noopener noreferrer" className="font-mono text-emerald-600 font-semibold hover:underline">0208204749</a>. State your Order ID and describe the hardware issue.
                 </div>
               </div>
               <div className="flex gap-3 items-start border-t border-border pt-4">

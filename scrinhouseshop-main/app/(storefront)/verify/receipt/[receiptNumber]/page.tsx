@@ -14,12 +14,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const result = await getPublicReceiptVerification(receiptNumber);
 
   if (!result || !result.receipt) {
-    return { title: "Receipt Verification | ScrinHouse" };
+    return { title: "Receipt Verification | scrinhouse" };
   }
 
   return {
-    title: `Verified Receipt #${result.receipt.receiptNumber} | ScrinHouse`,
-    description: `Official verified receipt for ${result.receipt.customerName} - ${result.receipt.deviceModel ?? "ScrinHouse Store"}`,
+    title: `Verified Receipt #${result.receipt.receiptNumber} | scrinhouse`,
+    description: `Official verified receipt for ${result.receipt.customerName} - ${result.receipt.deviceModel ?? "scrinhouse Store"}`,
   };
 }
 
@@ -45,7 +45,7 @@ export default async function PublicReceiptVerificationPage({ params }: Props) {
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground underline underline-offset-4"
           >
             <ArrowLeft className="size-3.5" />
-            Back to ScrinHouse Home
+            Back to scrinhouse Home
           </Link>
         </div>
       </div>
@@ -73,7 +73,7 @@ export default async function PublicReceiptVerificationPage({ params }: Props) {
                 </span>
               </div>
               <p className="text-xs text-emerald-800 mt-0.5">
-                Issued by ScrinHouse Ghana &middot; Ref: <span className="font-mono font-bold">#{receipt.receiptNumber}</span>
+                Issued by scrinhouse Ghana &middot; Ref: <span className="font-mono font-bold">#{receipt.receiptNumber}</span>
               </p>
             </div>
           </div>
@@ -99,24 +99,24 @@ export default async function PublicReceiptVerificationPage({ params }: Props) {
         {/* Customer Help Bar */}
         <div className="border-t border-emerald-200/60 pt-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-900">
           <span>Need help with your device or warranty claim?</span>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <a
-              href="https://wa.me/233500000000"
+              href="https://wa.me/233208204749"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:text-emerald-950 underline"
             >
               <MessageCircle className="size-3.5" />
-              <span>WhatsApp Support</span>
+              <span>WhatsApp: 0208204749</span>
             </a>
             <span>&middot;</span>
-            <a
-              href="tel:+233500000000"
-              className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:text-emerald-950 underline"
-            >
+            <div className="inline-flex items-center gap-1 font-semibold text-emerald-800">
               <Phone className="size-3.5" />
-              <span>Call Us</span>
-            </a>
+              <span>Call:</span>
+              <a href="tel:+233208204749" className="hover:text-emerald-950 underline ml-0.5">0208204749</a>
+              <span>/</span>
+              <a href="tel:+233247114256" className="hover:text-emerald-950 underline">0247114256</a>
+            </div>
           </div>
         </div>
       </div>
@@ -131,7 +131,7 @@ export default async function PublicReceiptVerificationPage({ params }: Props) {
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Return to ScrinHouse Store</span>
+          <span>Return to scrinhouse Store</span>
         </Link>
       </div>
     </div>

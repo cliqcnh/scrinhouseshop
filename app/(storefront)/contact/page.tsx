@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Mail, Phone, Clock } from "lucide-react";
+import { MessageCircle, Phone, Clock } from "lucide-react";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
   title: "Contact Us",
-  description: "Get in touch with ScrinHouse GH. We are an online store for smartphones and repairs.",
+  description: "Get in touch with scrinhouse GH. We are an online store for smartphones and repairs.",
 };
 
 export default function ContactPage() {
@@ -28,7 +28,7 @@ export default function ContactPage() {
                 Support Channels
               </h3>
               <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
-                As a fully online service, our support team is available via email and phone to help with catalog questions, tracking updates, and repair diagnostic advice.
+                As a fully online service, our support team is available via phone and WhatsApp to help with catalog questions, tracking updates, and repair diagnostic advice.
               </p>
             </div>
 
@@ -37,18 +37,29 @@ export default function ContactPage() {
                 <Phone className="size-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold">Phone Support</h4>
-                <p className="text-sm text-[#1d4ed8] mt-1 font-mono">+233 50 123 4567</p>
+                <h4 className="text-sm font-semibold">Phone Support (Call)</h4>
+                <div className="text-sm text-[#1d4ed8] mt-1 font-mono flex flex-wrap gap-2">
+                  <a href="tel:+233208204749" className="hover:underline">0208204749</a>
+                  <span>/</span>
+                  <a href="tel:+233247114256" className="hover:underline">0247114256</a>
+                </div>
               </div>
             </div>
 
             <div className="flex gap-4 items-start">
-              <div className="flex size-10 shrink-0 items-center justify-center border border-border bg-[#fcfcfc] text-foreground">
-                <Mail className="size-5" />
+              <div className="flex size-10 shrink-0 items-center justify-center border border-border bg-[#fcfcfc] text-emerald-600">
+                <MessageCircle className="size-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold">Email Support</h4>
-                <p className="text-sm text-[#1d4ed8] mt-1 font-mono">support@scrinhouse.com</p>
+                <h4 className="text-sm font-semibold">WhatsApp Support</h4>
+                <a
+                  href="https://wa.me/233208204749"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-emerald-600 hover:underline mt-1 font-mono block"
+                >
+                  0208204749
+                </a>
               </div>
             </div>
 

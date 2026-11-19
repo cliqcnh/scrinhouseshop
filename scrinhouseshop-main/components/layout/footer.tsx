@@ -51,14 +51,19 @@ export function Footer() {
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border pt-8 sm:flex-row sm:items-center">
           <div>
             <span className="font-heading text-base font-bold tracking-tight text-foreground flex items-baseline">
-              ScrinHouse<sup className="text-[10px] font-bold uppercase ml-0.5 align-super">GH</sup>
+              scrinhouse<sup className="text-[10px] font-bold uppercase ml-0.5 align-super">GH</sup>
             </span>
             <p className="mt-1 text-sm text-muted-foreground">
               Ghana&apos;s Trusted Phone Store &amp; Repair Experts
             </p>
+            <p className="mt-2 text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>Call: <a href="tel:+233208204749" className="font-mono font-medium hover:text-foreground">0208204749</a> / <a href="tel:+233247114256" className="font-mono font-medium hover:text-foreground">0247114256</a></span>
+              <span>&middot;</span>
+              <span>WhatsApp: <a href="https://wa.me/233208204749" target="_blank" rel="noopener noreferrer" className="font-mono font-medium text-emerald-600 hover:underline">0208204749</a></span>
+            </p>
           </div>
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} ScrinHouse. All rights reserved.
+            &copy; {new Date().getFullYear()} scrinhouse. All rights reserved.
           </p>
         </div>
       </div>

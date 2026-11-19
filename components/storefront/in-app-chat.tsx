@@ -349,7 +349,7 @@ export function InAppChat() {
                 <span className="absolute bottom-0 right-0 size-2.5 bg-[#22c55e] rounded-full ring-2 ring-[#121212]" />
               </div>
               <div>
-                <h4 className="font-heading text-sm font-bold text-white">ScrinHouse Support</h4>
+                <h4 className="font-heading text-sm font-bold text-white">scrinhouse Support</h4>
                 <p className="text-[10px] text-white/60">In-App Chat · Online</p>
               </div>
             </div>
@@ -370,7 +370,7 @@ export function InAppChat() {
               <div className="space-y-4 h-full flex flex-col">
                 <div className="bg-muted/30 p-3.5 border border-border text-xs text-muted-foreground leading-relaxed flex flex-col gap-1.5">
                   <p className="font-semibold text-foreground">Hi there! 👋</p>
-                  <p>Welcome to ScrinHouse support. Ask us about any of our devices, installment options, or request screen and diagnostic repairs.</p>
+                  <p>Welcome to scrinhouse support. Ask us about any of our devices, installment options, or request screen and diagnostic repairs.</p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-2">

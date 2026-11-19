@@ -233,7 +233,7 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
 
           <SheetHeader className="px-6 pb-3 border-b border-border flex-row items-center justify-between">
             <SheetTitle className="font-heading text-lg font-bold flex items-center gap-2">
-              <Sparkles className="size-4 text-foreground" /> Explore ScrinHouse
+              <Sparkles className="size-4 text-foreground" /> Explore scrinhouse
             </SheetTitle>
           </SheetHeader>
 
@@ -246,7 +246,7 @@ export function MobileBottomNav({ categories = [], displayName }: MobileBottomNa
                 </div>
                 <div>
                   <p className="text-sm font-bold">
-                    {displayName ? `Hello, ${displayName}!` : "Welcome to ScrinHouse"}
+                    {displayName ? `Hello, ${displayName}!` : "Welcome to scrinhouse"}
                   </p>
                   <p className="text-xs text-neutral-300">
                     {displayName ? "Manage account & wishlist" : "Sign in for saved carts & fast checkout"}

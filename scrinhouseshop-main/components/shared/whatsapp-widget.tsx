@@ -15,7 +15,7 @@ export function WhatsAppWidget() {
     const currentUrl = typeof window !== "undefined" ? window.location.href : "";
     const fullText = userMsg
       ? `${userMsg}\n\n(Page: ${currentUrl})`
-      : `Hello ScrinHouse! I have an inquiry regarding this page: ${currentUrl}`;
+      : `Hello scrinhouse! I have an inquiry regarding this page: ${currentUrl}`;
     
     const waUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(fullText)}`;
     window.open(waUrl, "_blank");
@@ -36,7 +36,7 @@ export function WhatsAppWidget() {
                 <span className="absolute bottom-0 right-0 size-2.5 bg-[#25d366] rounded-full ring-2 ring-[#075e54]" />
               </div>
               <div>
-                <h4 className="font-heading text-sm font-bold text-white">ScrinHouse Support</h4>
+                <h4 className="font-heading text-sm font-bold text-white">scrinhouse Support</h4>
                 <p className="text-[10px] text-white/80">Online · Replies in a few minutes</p>
               </div>
             </div>

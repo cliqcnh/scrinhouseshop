@@ -96,10 +96,10 @@ export function TradeInCalculator() {
           <div className="pt-4 border-t border-border mt-4 space-y-3 text-left max-w-sm mx-auto">
             <p className="text-xs font-bold text-foreground uppercase tracking-wider text-center">Fast-Track Your Valuation</p>
             <p className="text-xs text-muted-foreground leading-relaxed text-center">
-              Send clear photos of your phone to <strong className="text-foreground">0247114256</strong> on WhatsApp to speed up the valuation.
+              Send clear photos of your phone to <strong className="text-foreground">0208204749</strong> on WhatsApp to speed up the valuation.
             </p>
             <a
-              href={`https://wa.me/233247114256?text=Hi%20ScrinHouse%2C%20here%20are%20the%20images%20for%20my%20submitted%20trade-in%20request%20%28Reference%3A%20${submittedId}%29.`}
+              href={`https://wa.me/233208204749?text=Hi%20scrinhouse%2C%20here%20are%20the%20images%20for%20my%20submitted%20trade-in%20request%20%28Reference%3A%20${submittedId}%29.`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-bold uppercase tracking-wider transition-colors rounded-none gap-2 text-center"
@@ -313,10 +313,10 @@ export function TradeInCalculator() {
           <div className="border-t border-border pt-4 space-y-3">
             <p className="text-xs font-bold text-foreground uppercase tracking-wider">Fast-Track Valuation</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              To get a faster valuation, please send clear images of your phone (front, back, sides, and screen on) to <strong className="text-foreground">0247114256</strong>.
+              To get a faster valuation, please send clear images of your phone (front, back, sides, and screen on) to <strong className="text-foreground">0208204749</strong> on WhatsApp.
             </p>
             <a
-              href="https://wa.me/233247114256?text=Hi%20ScrinHouse%2C%20I%27d%20like%20to%20trade%20in%20my%20device%20and%20have%20submitted%20the%20details%20on%20the%20website.%20Here%20are%20the%20images%20for%20valuation."
+              href="https://wa.me/233208204749?text=Hi%20scrinhouse%2C%20I%27d%20like%20to%20trade%20in%20my%20device%20and%20have%20submitted%20the%20details%20on%20the%20website.%20Here%20are%20the%20images%20for%20valuation."
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-bold uppercase tracking-wider transition-colors rounded-none gap-2 text-center"

@@ -71,7 +71,7 @@ export function AdminSidebar() {
     <aside className="hidden w-60 shrink-0 border-r border-sidebar-border bg-sidebar lg:flex lg:flex-col">
       <div className="flex h-16 items-center px-5">
         <Link href="/admin" className="font-heading text-lg font-bold text-sidebar-foreground flex items-baseline">
-          ScrinHouse<sup className="text-[10px] font-bold uppercase ml-0.5 align-super">GH</sup>
+          scrinhouse<sup className="text-[10px] font-bold uppercase ml-0.5 align-super">GH</sup>
         </Link>
       </div>
 

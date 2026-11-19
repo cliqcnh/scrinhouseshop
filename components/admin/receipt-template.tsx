@@ -37,7 +37,7 @@ export function ReceiptTemplate({ receipt, showActions = true }: ReceiptTemplate
   }
 
   function handleWhatsAppShare() {
-    const message = `Hello ${receipt.customerName}, here is your official ScrinHouse receipt for ${
+    const message = `Hello ${receipt.customerName}, here is your official scrinhouse receipt for ${
       receipt.deviceModel ? receipt.deviceModel : "your purchase"
     }: ${verificationUrl}`;
     const url = `https://wa.me/${receipt.customerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
@@ -112,7 +112,7 @@ export function ReceiptTemplate({ receipt, showActions = true }: ReceiptTemplate
             <div>
               <div className="flex items-baseline gap-1">
                 <span className="font-heading text-2xl font-black tracking-tight text-neutral-900 sm:text-3xl">
-                  ScrinHouse
+                  scrinhouse
                 </span>
                 <sup className="text-[10px] font-bold uppercase text-neutral-500">GH</sup>
               </div>
@@ -120,7 +120,7 @@ export function ReceiptTemplate({ receipt, showActions = true }: ReceiptTemplate
                 Certified Phone Sales, Repairs & Protection
               </p>
               <p className="text-[11px] text-neutral-500 mt-1">
-                Accra, Ghana &middot; <span className="font-mono">scrinhouse.com</span> &middot; support@scrinhouse.com
+                Accra, Ghana &middot; <span className="font-mono">scrinhouse.com</span> &middot; Tel: 0208204749 / 0247114256
               </p>
             </div>
 
@@ -298,7 +298,7 @@ export function ReceiptTemplate({ receipt, showActions = true }: ReceiptTemplate
           </div>
 
           <div className="text-center sm:text-right text-[11px] text-neutral-400">
-            <p>Issued by: {receipt.issuedByName || "ScrinHouse Staff"}</p>
+            <p>Issued by: {receipt.issuedByName || "scrinhouse Staff"}</p>
             <p className="mt-0.5">Thank you for your business!</p>
           </div>
         </div>

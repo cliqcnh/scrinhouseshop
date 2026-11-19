@@ -31,7 +31,7 @@ export async function Header() {
         {/* Brand Logo */}
         <Link href="/" className="flex shrink-0 items-center gap-1.5">
           <span className="font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-baseline">
-            ScrinHouse<sup className="text-[10px] font-bold uppercase ml-0.5 align-super">GH</sup>
+            scrinhouse<sup className="text-[10px] font-bold uppercase ml-0.5 align-super">GH</sup>
           </span>
         </Link>
 
