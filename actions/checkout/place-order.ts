@@ -80,6 +80,7 @@ export async function placeOrder(
   installmentDetails?: InstallmentDetails,
   walletAmountToApply = 0,
   paymentMethod: "paystack" | "pod" = "paystack",
+  couponCode?: string,
 ): Promise<PlaceOrderResult> {
   const supabase = await createClient();
 
@@ -183,8 +184,24 @@ export async function placeOrder(
   };
 
   const subtotal = calculatedSubtotal;
+
+  let discountAmount = 0;
+  let validatedCouponCode: string | null = null;
+  if (couponCode && couponCode.trim()) {
+    try {
+      const { validateCoupon } = await import("@/actions/storefront/coupons");
+      const cpnRes = await validateCoupon(couponCode, subtotal);
+      if (cpnRes.valid && cpnRes.discountAmount) {
+        discountAmount = Math.min(subtotal, cpnRes.discountAmount);
+        validatedCouponCode = cpnRes.couponCode ?? couponCode.trim().toUpperCase();
+      }
+    } catch (e) {
+      console.error("Failed to validate coupon during placeOrder:", e);
+    }
+  }
+
   const deliveryFee = calculateDeliveryFeeFromServer(variants ?? [], address.region, deliveryConfig);
-  const total = subtotal + deliveryFee;
+  const total = Math.max(0, subtotal - discountAmount) + deliveryFee;
 
   let appliedWalletAmount = 0;
   if (walletAmountToApply && walletAmountToApply > 0) {
@@ -216,7 +233,12 @@ export async function placeOrder(
     .insert({
       user_id: user.id,
       status: amountToPayOnline === 0 ? (paymentMethod === "pod" ? "pending_delivery" : "paid") : "pending_payment",
-      delivery_address: { ...address, paymentMethod } as unknown as Record<string, unknown>,
+      delivery_address: {
+        ...address,
+        paymentMethod,
+        couponCode: validatedCouponCode,
+        discountAmount: discountAmount > 0 ? discountAmount : null,
+      } as unknown as Record<string, unknown>,
       subtotal,
       delivery_fee: deliveryFee,
       total,
@@ -231,6 +253,25 @@ export async function placeOrder(
 
   if (orderErr || !order) {
     throw new Error(`Failed to create order: ${orderErr?.message}`);
+  }
+
+  // Increment coupon usage count if a valid coupon was used
+  if (validatedCouponCode) {
+    try {
+      const { createServiceRoleClient } = await import("@/lib/supabase/server");
+      const adminClient = createServiceRoleClient();
+      const { data: cpn } = await (adminClient.from("coupons") as any)
+        .select("id, used_count")
+        .eq("code", validatedCouponCode)
+        .maybeSingle();
+      if (cpn) {
+        await (adminClient.from("coupons") as any)
+          .update({ used_count: (cpn.used_count ?? 0) + 1 })
+          .eq("id", cpn.id);
+      }
+    } catch (e) {
+      console.warn("Could not increment coupon used_count:", e);
+    }
   }
 
   // Deduct from wallet and log transaction if wallet was applied

@@ -13,30 +13,59 @@ export interface ValidateCouponResult {
 }
 
 export async function validateCoupon(code: string, subtotal: number): Promise<ValidateCouponResult> {
-  const supabase = await createClient();
-  const cleanCode = code.trim().toUpperCase();
+  const cleanCode = code ? code.trim().toUpperCase() : "";
+  if (!cleanCode) {
+    return { valid: false, error: "Please enter a promo code." };
+  }
+
+  // Try privileged service role client first to avoid any client RLS issues,
+  // falling back to standard createClient
+  let supabase: any;
+  try {
+    const { createServiceRoleClient } = await import("@/lib/supabase/server");
+    if (typeof createServiceRoleClient === "function") {
+      supabase = createServiceRoleClient();
+    }
+  } catch {
+    // Service role not configured or in unit test environment
+  }
+
+  if (!supabase) {
+    supabase = await createClient();
+  }
 
   const { data, error } = await (supabase.from("coupons") as any)
     .select("*")
     .eq("code", cleanCode)
-    .eq("is_active", true)
     .maybeSingle();
 
   if (error || !data) {
-    return { valid: false, error: "Invalid or expired promo code." };
+    return { valid: false, error: `Promo code "${cleanCode}" does not exist. Please check your spelling.` };
   }
 
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    return { valid: false, error: "This promo code has expired." };
+  if (!data.is_active) {
+    return { valid: false, error: `Promo code "${cleanCode}" is currently disabled.` };
   }
 
-  if (data.max_uses !== null && data.used_count >= data.max_uses) {
-    return { valid: false, error: "This promo code has reached its usage limit." };
+  // Check expiration if set
+  if (data.expires_at) {
+    const expiresAt = new Date(data.expires_at);
+    if (!isNaN(expiresAt.getTime()) && expiresAt.getTime() < Date.now()) {
+      return { valid: false, error: "This promo code has expired." };
+    }
+  }
+
+  // Check usage limit if set
+  if (data.max_uses !== null && data.max_uses !== undefined && data.used_count >= Number(data.max_uses)) {
+    return { valid: false, error: "This promo code has reached its maximum usage limit." };
   }
 
   const minOrder = Number(data.min_order_amount ?? 0);
   if (subtotal < minOrder) {
-    return { valid: false, error: `Minimum order total of GHS ${minOrder.toFixed(2)} required for this code.` };
+    return {
+      valid: false,
+      error: `Minimum order total of GHS ${minOrder.toFixed(2)} required for this promo code.`,
+    };
   }
 
   let discountAmount = 0;

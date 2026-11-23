@@ -230,7 +230,14 @@ export function CheckoutForm({ defaultName, defaultPhone, userEmail, savedAddres
       const cartTotal = Math.max(0, subtotal() - (appliedCoupon?.discountAmount ?? 0));
       const walletDeduction = useWallet ? Math.min(walletBalance, cartTotal) : 0;
 
-      const result = await placeOrder(items, address, installmentDetails, walletDeduction, paymentMethod);
+      const result = await placeOrder(
+        items,
+        address,
+        installmentDetails,
+        walletDeduction,
+        paymentMethod,
+        appliedCoupon?.code
+      );
 
       // If Paystack returned a hosted URL → redirect there
       if (result.authorizationUrl) {
